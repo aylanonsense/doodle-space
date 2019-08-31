@@ -1,4 +1,4 @@
-local vec3 = require('utils/vec3')
+local vec3 = require('3d/vec3')
 local defineClass = require('utils/defineClass')
 local tableUtils = require('utils/table')
 
@@ -32,12 +32,12 @@ local Shape = defineClass({
               -- Get the three vertices that make up this face
               local v1, v2, v3 = self.vertices[self.vertexMap[j]], self.vertices[self.vertexMap[j + 1]], self.vertices[self.vertexMap[j + 2]]
               -- Find two lines on the polygon's plane
-              vecPool1:subtractVec3(v3, v2)
-              vecPool2:subtractVec3(v2, v1)
+              vecPool1:subtract(v3, v2)
+              vecPool2:subtract(v2, v1)
               -- Add the normal to the sume
               vecPool1:cross(vecPool1, vecPool2)
               vecPool1:normalize(vecPool1)
-              vecPool3:addVec3(vecPool3, vecPool1)
+              vecPool3:add(vecPool3, vecPool1)
             end
           end
           vecPool3:normalize(vecPool3)
@@ -47,8 +47,8 @@ local Shape = defineClass({
           -- Get the three vertices that make up this face
           local v1, v2, v3 = self.vertices[j * 3 + 1], self.vertices[j * 3 + 2], self.vertices[j * 3 + 3]
           -- Find two lines on the polygon's plane
-          vecPool1:subtractVec3(v3, v2)
-          vecPool2:subtractVec3(v2, v1)
+          vecPool1:subtract(v3, v2)
+          vecPool2:subtract(v2, v1)
           -- Calculate the cross product
           vecPool1:cross(vecPool1, vecPool2)
           vecPool1:normalize(vecPool1)
@@ -204,7 +204,7 @@ local Arrow = defineClass(Shape, {
     })
   end
 })
-Shape.Arrow = Arrow:new()
+Shape.Arrow = Arrow:new(10)
 
 local Icosahedron = defineClass(Shape, {
   init = function(self)
@@ -289,9 +289,9 @@ local Sphere = defineClass(Icosahedron, {
       local subdividedVertices = {}
       for i = 1, #self.vertices, 3 do
         local v1, v2, v3 = self.vertices[i], self.vertices[i + 1], self.vertices[i + 2]
-        vecPool1:averageVec3(v1, v2)
-        vecPool2:averageVec3(v2, v3)
-        vecPool3:averageVec3(v1, v3)
+        vecPool1:average(v1, v2)
+        vecPool2:average(v2, v3)
+        vecPool3:average(v1, v3)
         table.insert(subdividedVertices, vecPool1:clone())
         table.insert(subdividedVertices, vecPool2:clone())
         table.insert(subdividedVertices, vecPool3:clone())

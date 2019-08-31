@@ -1,5 +1,7 @@
 local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
+local Shape = require('3d/Shape')
+local vec3 = require('3d/vec3')
 
 -- Define vertex and polygon formats
 local VERTEX_FORMAT = {
@@ -10,15 +12,15 @@ local VERTEX_FORMAT = {
 local POLYGON_FORMAT = 'triangles'
 
 -- Create a default black texture
-local DEFAULT_TEXTURE = love.graphics.newCanvas(1,1)
+local DEFAULT_TEXTURE = love.graphics.newCanvas(1, 1)
 love.graphics.setCanvas(DEFAULT_TEXTURE)
 love.graphics.clear(0, 0, 0)
 love.graphics.setCanvas()
 
 local Model = defineClass({
-  pos = nil,
+  position = nil,
   rotation = nil,
-  size = nil,
+  scale = nil,
   transform = nil,
   transformInverse = nil,
   mesh = nil,
@@ -26,9 +28,9 @@ local Model = defineClass({
   cullBackFacingPolygons = true,
   init = function(self, shape, texture)
     -- Set basic attributes
-    self.pos = cpml.vec3.new(0, 0, 0)
-    self.rotation = cpml.vec3.new(0, 0, 0)
-    self.size = cpml.vec3.new(1, 1, 1)
+    self.position = vec3(0, 0, 0)
+    self.rotation = vec3(0, 0, 0)
+    self.scale = vec3(1, 1, 1)
 
     -- Create a new mesh
     self.mesh = love.graphics.newMesh(VERTEX_FORMAT, shape.vertices, POLYGON_FORMAT)
@@ -37,7 +39,9 @@ local Model = defineClass({
     end
     self.mesh:setTexture(texture or DEFAULT_TEXTURE)
 
-    -- Immediately calculate the transformation matrix
+    -- Calculate the transformation matrix
+    self.transform = cpml.mat4()
+    self.transformInverse = cpml.mat4()
     self:calculateTransform()
   end,
   draw = function(self)
@@ -46,27 +50,72 @@ local Model = defineClass({
     love.graphics.draw(self.mesh)
   end,
   setPosition = function(self, x, y, z)
-    self.pos.x, self.pos.y, self.pos.z = x, y, z
+    if y or z then
+      self.position:setValues(x, y, z)
+    else
+      self.position:set(x)
+    end
+    return self
   end,
   translate = function(self, x, y, z)
-    self.pos.x, self.pos.y, self.pos.z = self.pos.x + x, self.pos.y + y, self.pos.z + z
+    if y or z  then
+      self.position:addValues(self.position, x, y, z)
+    else
+      self.position:add(x)
+    end
+    return self
   end,
   setRotation = function(self, x, y, z)
-    self.rotation.x, self.rotation.y, self.rotation.z = x, y, z
+    if y or z then
+      self.rotation:setValues(x, y, z)
+    else
+      self.rotation:set(x)
+    end
+    return self
   end,
   rotate = function(self, x, y, z)
-    self.rotation.x, self.rotation.y, self.rotation.z = self.rotation.x + x, self.rotation.y + y, self.rotation.z + z
+    if y or z then
+      self.rotation:addValues(self.rotation, x, y, z)
+    else
+      self.rotation:add(self.rotation, x)
+    end
+    return self
+  end,
+  setScale = function(self, x, y, z)
+    if y or z then
+      self.scale:setValues(x, y, z)
+    else
+      self.scale:set(x)
+    end
+    return self
+  end,
+  resize = function(self, x, y, z)
+    if y or z then
+      self.scale:multiplyValues(self.scale, x, y, z)
+    else
+      self.scale:multiply(self.scale, x)
+    end
+    return self
+  end,
+  setDirection = function(self, x, y, z)
+    if y or z then
+      self.rotation:dirToModelAngle({ x, y, z }) -- Unnecessarily makes an extra object
+    else
+      self.rotation:dirToModelAngle(x)
+    end
+    return self
   end,
   calculateTransform = function(self)
-    self.transform = cpml.mat4.identity()
-    self.transform:translate(self.transform, self.pos)
-    self.transform:rotate(self.transform, self.rotation.x, cpml.vec3.unit_x)
+    self.transform:identity()
+    self.transform:translate(self.transform, self.position)
     self.transform:rotate(self.transform, self.rotation.y, cpml.vec3.unit_y)
+    self.transform:rotate(self.transform, self.rotation.x, cpml.vec3.unit_x)
     self.transform:rotate(self.transform, self.rotation.z, cpml.vec3.unit_z)
-    self.transform:scale(self.transform, self.size)
+    self.transform:scale(self.transform, self.scale)
     self.transform:transpose(self.transform)
-    self.inverseTransform = self.transform.invert(cpml.mat4.new(), self.transform)
-    self.inverseTransform:transpose(self.inverseTransform)
+    self.transformInverse:invert(self.transform)
+    self.transformInverse:transpose(self.transformInverse)
+    return self
   end
 })
 

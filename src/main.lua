@@ -24,30 +24,17 @@ function love.load()
   scene = Scene:new(width, height)
 
   -- Move the camera
-  scene.camera:translate(5, 1, 5)
-  scene.camera:calculateTransform()
+  scene.camera:translate(5, 1, 5):calculateTransform()
 
-  -- Create a grid of objects
+  -- Create an object
   local texture = love.graphics.newImage('../img/texture.png')
-  for x = 1, 21, 5 do
-    for y = 1, 21, 5 do
-      for z = 1, 21, 5 do
-        local obj = scene:addModel(Model:new(Shape.Sphere, texture))
-        obj:setPosition(x, y, z)
-        obj:calculateTransform()
-      end
-    end
-  end
+  local obj = scene:addModel(Model:new(Shape.Sphere, texture))
+  obj:setPosition(5, 3, 1):setRotation(-math.pi / 2 + 0.01, 0.35, 0.0):setScale(1, 3, 1):calculateTransform()
 
   -- Add vectors to better show the origin and each axis
-  local arrow
-  arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
-  arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
-  arrow:setRotation(-math.pi / 2, 0, 0)
-  arrow:calculateTransform()
-  arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
-  arrow:setRotation(0, math.pi / 2, 0)
-  arrow:calculateTransform()
+  scene:addArrowInDirection({ 0, 0, 0 }, { 0, 0, 1 }, 10)
+  scene:addArrowInDirection({ 0, 0, 0 }, { 0, 1, 0 }, 10)
+  scene:addArrowInDirection({ 0, 0, 0 }, { 1, 0, 0 }, 10)
 end
 
 function love.update(dt)

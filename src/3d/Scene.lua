@@ -1,6 +1,9 @@
 local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
 local Camera = require('3d/Camera')
+local Shape = require('3d/Shape')
+local Model = require('3d/Model')
+local vec3 = require('3d/vec3')
 
 local THREE_DIMENSIONAL_SHADER = love.graphics.newShader('../shaders/three-dimensional.shader')
 
@@ -38,7 +41,7 @@ local Scene = defineClass({
     -- Render each model
     for _, model in ipairs(self.models) do
       self.shader:send('model_transform', model.transform)
-      self.shader:send('model_transform_inverse', model.inverseTransform)
+      self.shader:send('model_transform_inverse', model.transformInverse)
       model:draw()
     end
 
@@ -67,6 +70,29 @@ local Scene = defineClass({
     self.camera:setAspectRatio(width / height)
     self.camera:calculatePerspective()
     self.camera:calculateTransform()
+  end,
+  addArrowBetweenPoints = function(self, pt1, pt2)
+    local diff = vec3.subtract(vec3(), pt2, pt1)
+    -- Create an arrow of the correct length
+    local shape = Shape.Arrow:new(diff:length())
+    local model = Model:new(shape)
+    -- Position it at the start point and point it towards the end point
+    model:setPosition(pt1)
+    model:setDirection(diff)
+    model:calculateTransform()
+    -- Add the arrow to the scene
+    return self:addModel(model)
+  end,
+  addArrowInDirection = function(self, pos, dir, length)
+    -- Create an arrow of the correct length
+    local shape = Shape.Arrow:new(length or 1)
+    local model = Model:new(shape)
+    -- Position it at the start point and point it in the right direction
+    model:setPosition(pos)
+    model:setDirection(dir)
+    model:calculateTransform()
+    -- Add the arrow to the scene
+    return self:addModel(model)
   end
 })
 
