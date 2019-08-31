@@ -1,5 +1,7 @@
 local cpml = require('libs/cpml')
+local vec3 = require('utils/vec3')
 local defineClass = require('utils/defineClass')
+local tableUtils = require('utils/table')
 
 -- Vertex pools for calculating normals
 local tempNormal1, tempNormal2 = cpml.vec3.new(), cpml.vec3.new()
@@ -10,7 +12,9 @@ local Shape = defineClass({
   init = function(self, vertices, vertexMap)
     self.vertices = vertices
     self.vertexMap = vertexMap
-    -- Clean up the vertices
+    self:cleanUpVertices()
+  end,
+  cleanUpVertices = function(self)
     for i, vertex in ipairs(self.vertices) do
       -- If no UV values were provided, make some up
       if not vertex[4] or not vertex[5] then
@@ -58,7 +62,7 @@ local Rectangle = defineClass(Shape, {
   init = function(self, width, height)
     width = width or 1
     height = height or 1
-    self.superclass.init(self, {
+    Shape.init(self, {
       -- Upper left
       { -width, height, 0, 0, 0 },
       -- Upper right
@@ -80,7 +84,7 @@ local Cube = defineClass(Shape, {
     width = width or 1
     height = height or 1
     depth = depth or 1
-    self.superclass.init(self, {
+    Shape.init(self, {
       -- Front face
       { -width, height, depth, 0, 0 },
       { width, height, depth, 1, 0 },
@@ -130,7 +134,7 @@ local Arrow = defineClass(Shape, {
     local b = 0.05
     local c = length - 0.25
     local d = length
-    self.superclass.init(self, {
+    Shape.init(self, {
       -- Back face
       { a, a, 0, 0, 0 },
       { -a, a, 0, 1, 0 },
@@ -199,5 +203,115 @@ local Arrow = defineClass(Shape, {
   end
 })
 Shape.Arrow = Arrow:new()
+
+local Icosahedron = defineClass(Shape, {
+  init = function(self)
+    local a = 1
+    local b = 1 / ((1 + math.sqrt(5)) / 2)
+    Shape.init(self, {
+      { -a,  0,  b },
+      { -b,  a,  0 },
+      {  0,  b,  a },
+      {  0,  b,  a },
+      { -b,  a,  0 },
+      {  b,  a,  0 },
+      {  b,  a,  0 },
+      { -b,  a,  0 },
+      {  0,  b, -a },
+      {  0,  b, -a },
+      { -b,  a,  0 },
+      { -a,  0, -b },
+      { -a,  0, -b },
+      { -b,  a,  0 },
+      { -a,  0,  b },
+      {  0,  b,  a },
+      {  b,  a,  0 },
+      {  a,  0,  b },
+      { -a,  0,  b },
+      {  0,  b,  a },
+      {  0, -b,  a },
+      { -a,  0, -b },
+      { -a,  0,  b },
+      { -b, -a,  0 },
+      {  0,  b, -a },
+      { -a,  0, -b },
+      {  0, -b, -a },
+      {  b,  a,  0 },
+      {  0,  b, -a },
+      {  a,  0, -b },
+      {  a,  0,  b },
+      {  b, -a,  0 },
+      {  0, -b,  a },
+      {  0, -b,  a },
+      {  b, -a,  0 },
+      { -b, -a,  0 },
+      { -b, -a,  0 },
+      {  b, -a,  0 },
+      {  0, -b, -a },
+      {  0, -b, -a },
+      {  b, -a,  0 },
+      {  a,  0, -b },
+      {  a,  0, -b },
+      {  b, -a,  0 },
+      {  a,  0,  b },
+      {  a,  0,  b },
+      {  0, -b,  a },
+      {  0,  b,  a },
+      {  0, -b,  a },
+      { -b, -a,  0 },
+      { -a,  0,  b },
+      { -b, -a,  0 },
+      {  0, -b, -a },
+      { -a,  0, -b },
+      {  0, -b, -a },
+      {  a,  0, -b },
+      {  0,  b, -a },
+      {  a,  0, -b },
+      {  a,  0,  b },
+      {  b,  a,  0 }
+    })
+  end
+})
+Shape.Icosahedron = Icosahedron:new()
+
+local Sphere = defineClass(Icosahedron, {
+  init = function(self, subdivisions)
+    subdivisions = subdivisions or 1
+    Icosahedron.init(self)
+    -- Move all vertices to be on the unit ciircle
+    for _, vertex in ipairs(self.vertices) do
+      vec3.normalize(vertex, vertex)
+    end
+    -- Repeatedly subdivide every face
+    for subdivides = 1, subdivisions do
+      local subdividedVertices = {}
+      for i = 1, #self.vertices, 3 do
+        local v1, v2, v3 = self.vertices[i], self.vertices[i + 1], self.vertices[i + 2]
+        local midpoint1 = { (v1[1] + v2[1]) / 2, (v1[2] + v2[2]) / 2, (v1[3] + v2[3]) / 2 }
+        local midpoint2 = { (v2[1] + v3[1]) / 2, (v2[2] + v3[2]) / 2, (v2[3] + v3[3]) / 2 }
+        local midpoint3 = { (v1[1] + v3[1]) / 2, (v1[2] + v3[2]) / 2, (v1[3] + v3[3]) / 2 }
+        table.insert(subdividedVertices, midpoint1)
+        table.insert(subdividedVertices, midpoint2)
+        table.insert(subdividedVertices, midpoint3)
+        table.insert(subdividedVertices, vec3.clone({}, v1))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint1))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint3))
+        table.insert(subdividedVertices, vec3.clone({}, v2))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint2))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint1))
+        table.insert(subdividedVertices, vec3.clone({}, v3))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint3))
+        table.insert(subdividedVertices, vec3.clone({}, midpoint2))
+      end
+      self.vertices = subdividedVertices
+      -- Move all the new vertices to be on the unit ciircle
+      for _, vertex in ipairs(self.vertices) do
+        vec3.normalize(vertex, vertex)
+      end
+    end
+    self:cleanUpVertices()
+  end
+})
+Shape.Sphere = Sphere:new(2)
 
 return Shape

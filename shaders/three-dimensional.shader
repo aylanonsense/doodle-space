@@ -8,10 +8,10 @@ uniform vec3 world_light_direction;
 varying vec3 normal;
 
 #ifdef VERTEX
-  attribute vec4 VertexNormal;
+  attribute vec4 vertex_normal;
 
   vec4 position(mat4 transform_projection, vec4 vertex_position) {
-    normal = vec3(model_transform_inverse * vec4(VertexNormal));
+    normal = vec3(model_transform_inverse * vertex_normal);
     return camera_transform * model_transform * vertex_position;
   }
 #endif

@@ -32,7 +32,7 @@ function love.load()
   for x = 1, 21, 5 do
     for y = 1, 21, 5 do
       for z = 1, 21, 5 do
-        local obj = scene:addModel(Model:new(Shape.Cube, texture))
+        local obj = scene:addModel(Model:new(Shape.Sphere, texture))
         obj:setPosition(x, y, z)
         obj:calculateTransform()
       end

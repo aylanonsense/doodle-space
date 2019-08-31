@@ -5,7 +5,7 @@ local defineClass = require('utils/defineClass')
 local VERTEX_FORMAT = {
   { 'VertexPosition', 'float', 3 },
   { 'VertexTexCoord', 'float', 2 },
-  { 'VertexNormal', 'float', 3 }
+  { 'vertex_normal', 'float', 3 }
 }
 local POLYGON_FORMAT = 'triangles'
 
