@@ -8,14 +8,12 @@ local Camera = defineClass({
   transform = nil,
   fov = 80,
   aspectRatio = 1,
-  nearClip = 0.001,
+  nearClip = 0.1,
   farClip = 10000,
   init = function(self, aspectRatio)
     self.pos = cpml.vec3(0, 0, 0)
     self.rotation = cpml.vec3(0, 0, 0)
-    if aspectRatio then
-      self.aspectRatio = aspectRatio
-    end
+    self.aspectRatio = aspectRatio or self.aspectRatio
     self:calculatePerspective()
     self:calculateTransform()
   end,

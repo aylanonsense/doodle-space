@@ -1,34 +1,29 @@
-uniform mat4 camera;
-uniform mat4 modelMatrix;
-uniform mat4 modelMatrixInverse;
-uniform float ambientLightLevel;
-uniform vec3 ambientLightDirection;
+uniform mat4 camera_transform;
+uniform mat4 model_transform;
+uniform mat4 model_transform_inverse;
+uniform float ambient_light_level;
+uniform float world_light_level;
+uniform vec3 world_light_direction;
 
-varying mat4 modelView;
-varying mat4 modelViewProjection;
 varying vec3 normal;
-varying vec3 vposition;
 
 #ifdef VERTEX
   attribute vec4 VertexNormal;
 
   vec4 position(mat4 transform_projection, vec4 vertex_position) {
-    modelView = camera * modelMatrix;
-    modelViewProjection = camera * modelMatrix * transform_projection;
-    normal = vec3(modelMatrixInverse * vec4(VertexNormal));
-    vposition = vec3(modelMatrix * vertex_position);
-    return camera * modelMatrix * vertex_position;
+    normal = vec3(model_transform_inverse * vec4(VertexNormal));
+    return camera_transform * model_transform * vertex_position;
   }
 #endif
 
 #ifdef PIXEL
   vec4 effect(vec4 color, Image texture, vec2 texture_coords, vec2 screen_coords) {
-    vec4 texturecolor = Texel(texture, texture_coords);
-    if (texturecolor.a == 0.0) {
+    vec4 texture_color = Texel(texture, texture_coords);
+    if (texture_color.a == 0.0) {
         discard;
     }
-    float light = max(dot(normalize(ambientLightDirection), normal), 0);
-    texturecolor.rgb *= max(light, ambientLightLevel);
-    return color*texturecolor;
+    float world_light = world_light_level * max(dot(normalize(world_light_direction), normal), 0);
+    texture_color.rgb *= ambient_light_level + world_light * (1 - ambient_light_level);
+    return color * texture_color;
   }
 #endif

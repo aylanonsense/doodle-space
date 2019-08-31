@@ -25,22 +25,28 @@ local Model = defineClass({
   transform = nil,
   transformInverse = nil,
   mesh = nil,
-  isVisible = true,
   isWireframe = false,
   cullBackFacingPolygons = true,
-  init = function(self, body, texture)
+  init = function(self, shape, texture)
     -- Set basic attributes
     self.pos = cpml.vec3.new(0, 0, 0)
     self.rotation = cpml.vec3.new(0, 0, 0)
     self.size = cpml.vec3.new(1, 1, 1)
+
     -- Create a new mesh
-    self.mesh = love.graphics.newMesh(VERTEX_FORMAT, body.vertices, POLYGON_FORMAT)
-    if body.vertexMap then
-      self.mesh:setVertexMap(body.vertexMap)
+    self.mesh = love.graphics.newMesh(VERTEX_FORMAT, shape.vertices, POLYGON_FORMAT)
+    if shape.vertexMap then
+      self.mesh:setVertexMap(shape.vertexMap)
     end
     self.mesh:setTexture(texture or DEFAULT_TEXTURE)
+
     -- Immediately calculate the transformation matrix
-    self:recalculateTransform()
+    self:calculateTransform()
+  end,
+  draw = function(self)
+    love.graphics.setWireframe(self.isWireframe)
+    love.graphics.setMeshCullMode(self.cullBackFacingPolygons and 'back' or 'none')
+    love.graphics.draw(self.mesh)
   end,
   setPosition = function(self, x, y, z)
     self.pos.x, self.pos.y, self.pos.z = x, y, z
@@ -54,7 +60,7 @@ local Model = defineClass({
   rotate = function(self, x, y, z)
     self.rotation.x, self.rotation.y, self.rotation.z = self.rotation.x + x, self.rotation.y + y, self.rotation.z + z
   end,
-  recalculateTransform = function(self)
+  calculateTransform = function(self)
     self.transform = cpml.mat4.identity()
     self.transform:translate(self.transform, self.pos)
     self.transform:rotate(self.transform, self.rotation.x, cpml.vec3.unit_x)

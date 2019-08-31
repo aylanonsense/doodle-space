@@ -3,7 +3,7 @@ local Scene = require('3d/Scene')
 local Model = require('3d/Model')
 local Shape = require('3d/Shape')
 
--- Constaints
+-- Constants
 local CAMERA_SENSITIVITY = 0.5
 
 -- Game variables
@@ -27,21 +27,27 @@ function love.load()
   scene.camera:translate(5, 1, 5)
   scene.camera:calculateTransform()
 
-  -- Create an object of some kind
+  -- Create a grid of objects
   local texture = love.graphics.newImage('../img/texture.png')
-  local obj = scene:addModel(Model:new(Shape.Cube, texture))
-  obj:setPosition(1, 1, 1)
-  obj:recalculateTransform()
+  for x = 1, 21, 5 do
+    for y = 1, 21, 5 do
+      for z = 1, 21, 5 do
+        local obj = scene:addModel(Model:new(Shape.Cube, texture))
+        obj:setPosition(x, y, z)
+        obj:calculateTransform()
+      end
+    end
+  end
 
   -- Add vectors to better show the origin and each axis
   local arrow
   arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
   arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
   arrow:setRotation(-math.pi / 2, 0, 0)
-  arrow:recalculateTransform()
+  arrow:calculateTransform()
   arrow = scene:addModel(Model:new(Shape.Arrow:new(10)))
   arrow:setRotation(0, math.pi / 2, 0)
-  arrow:recalculateTransform()
+  arrow:calculateTransform()
 end
 
 function love.update(dt)

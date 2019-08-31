@@ -2,59 +2,59 @@ local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
 local Camera = require('3d/Camera')
 
+local THREE_DIMENSIONAL_SHADER = love.graphics.newShader('../shaders/three-dimensional.shader')
+
 local Scene = defineClass({
+  ambientLightLevel = 0.25,
+  worldLightLevel = 1.00,
+  worldLightDirection = { 0.25, 1, 0.5 },
   width = nil,
   height = nil,
   canvas = nil,
   shader = nil,
-  models = nil,
   camera = nil,
+  models = nil,
   init = function(self, width, height)
     self.width = width
     self.height = height
-    self.shader = love.graphics.newShader('../shaders/three-dimensional.shader')
     self.canvas = love.graphics.newCanvas(width, height)
-    self.models = {}
+    self.shader = THREE_DIMENSIONAL_SHADER
     self.camera = Camera:new(width / height)
+    self.models = {}
   end,
   draw = function(self)
+    -- Clear the canvas
     love.graphics.setCanvas({ self.canvas, depth = true })
-    love.graphics.setShader(self.shader)
     love.graphics.setColor(1, 1, 1)
     love.graphics.clear(0, 0, 0, 0)
 
-    self.shader:send('camera', self.camera.transform)
-    self.shader:send('ambientLightLevel', 0.25)
-    self.shader:send('ambientLightDirection', { 0, 1, 1 })
+    -- Send uniforms to the shader
+    love.graphics.setShader(self.shader)
+    self.shader:send('camera_transform', self.camera.transform)
+    self.shader:send('ambient_light_level', self.ambientLightLevel)
+    self.shader:send('world_light_level', self.worldLightLevel)
+    self.shader:send('world_light_direction', self.worldLightDirection)
 
-    for i=1, #self.models do
-      local model = self.models[i]
-      if model ~= nil and model.isVisible then
-        self.shader:send('modelMatrix', model.transform)
-        self.shader:send('modelMatrixInverse', model.inverseTransform)
-        love.graphics.setWireframe(model.isWireframe)
-        if model.cullBackFacingPolygons then
-          love.graphics.setMeshCullMode('back')
-        end
-        love.graphics.draw(model.mesh, -self.width/2, -self.height/2)
-        love.graphics.setMeshCullMode('none')
-        love.graphics.setWireframe(false)
-    end
+    -- Render each model
+    for _, model in ipairs(self.models) do
+      self.shader:send('model_transform', model.transform)
+      self.shader:send('model_transform_inverse', model.inverseTransform)
+      model:draw()
     end
 
+    -- Copy the 3D render to the actual canvas
     love.graphics.setShader()
     love.graphics.setCanvas()
-
     love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(self.canvas, self.width / 2, self.height / 2, 0, 1,-1, self.width / 2, self.height / 2)
+    love.graphics.draw(self.canvas, 0, 0, 0, 1, -1, 0, self.height) -- why is it upside down?
   end,
   addModel = function (self, model)
     table.insert(self.models, model)
     return model
   end,
   removeModel = function (self, model)
-    for i = 1, #self.models do
-      if self.models[i] == model then
+    for i, model2 in ipairs(self.models) do
+      if model2 == model then
         table.remove(self.models, i)
         break;
       end
