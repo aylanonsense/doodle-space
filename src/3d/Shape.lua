@@ -1,10 +1,9 @@
-local cpml = require('libs/cpml')
 local vec3 = require('utils/vec3')
 local defineClass = require('utils/defineClass')
 local tableUtils = require('utils/table')
 
--- Vertex pools for calculating normals
-local tempNormal1, tempNormal2 = cpml.vec3.new(), cpml.vec3.new()
+-- Vertex pool for calculations
+local vecPool1, vecPool2, vecPool3 = vec3(), vec3(), vec3()
 
 local Shape = defineClass({
   vertices = nil,
@@ -26,31 +25,34 @@ local Shape = defineClass({
       if not vertex[6] or not vertex[7] or not vertex[8] then
         -- Find every face the vertex is in
         if self.vertexMap then
-          local sumVectors = cpml.vec3.new()
+          -- Keep a sum of all normals
+          vecPool3:zero()
           for j = 1, #self.vertexMap, 3 do
             if self.vertexMap[j] == i or self.vertexMap[j + 1] == i or self.vertexMap[j + 2] == i then
               -- Get the three vertices that make up this face
               local v1, v2, v3 = self.vertices[self.vertexMap[j]], self.vertices[self.vertexMap[j + 1]], self.vertices[self.vertexMap[j + 2]]
               -- Find two lines on the polygon's plane
-              tempNormal1.x, tempNormal1.y, tempNormal1.z = v3[1] - v2[1], v3[2] - v2[2], v3[3] - v2[3]
-              tempNormal2.x, tempNormal2.y, tempNormal2.z = v2[1] - v1[1], v2[2] - v1[2], v2[3] - v1[3]
-              -- Calculate the cross product
-              local cross = cpml.vec3.cross(tempNormal1, tempNormal2):normalize()
-              sumVectors.x, sumVectors.y, sumVectors.z = sumVectors.x + cross.x, sumVectors.y + cross.y, sumVectors.z + cross.z
+              vecPool1:subtractVec3(v3, v2)
+              vecPool2:subtractVec3(v2, v1)
+              -- Add the normal to the sume
+              vecPool1:cross(vecPool1, vecPool2)
+              vecPool1:normalize(vecPool1)
+              vecPool3:addVec3(vecPool3, vecPool1)
             end
           end
-          local normal = sumVectors:normalize()
-          vertex[6], vertex[7], vertex[8] = normal.x, normal.y, normal.z
+          vecPool3:normalize(vecPool3)
+          vertex[6], vertex[7], vertex[8] = vecPool3[1], vecPool3[2], vecPool3[3]
         else
           local j = math.floor((i - 1) / 3)
           -- Get the three vertices that make up this face
           local v1, v2, v3 = self.vertices[j * 3 + 1], self.vertices[j * 3 + 2], self.vertices[j * 3 + 3]
           -- Find two lines on the polygon's plane
-          tempNormal1.x, tempNormal1.y, tempNormal1.z = v3[1] - v2[1], v3[2] - v2[2], v3[3] - v2[3]
-          tempNormal2.x, tempNormal2.y, tempNormal2.z = v2[1] - v1[1], v2[2] - v1[2], v2[3] - v1[3]
+          vecPool1:subtractVec3(v3, v2)
+          vecPool2:subtractVec3(v2, v1)
           -- Calculate the cross product
-          local normal = cpml.vec3.cross(tempNormal1, tempNormal2):normalize()
-          vertex[6], vertex[7], vertex[8] = normal.x, normal.y, normal.z
+          vecPool1:cross(vecPool1, vecPool2)
+          vecPool1:normalize(vecPool1)
+          vertex[6], vertex[7], vertex[8] = vecPool1[1], vecPool1[2], vecPool1[3]
         end
       end
     end
@@ -64,13 +66,13 @@ local Rectangle = defineClass(Shape, {
     height = height or 1
     Shape.init(self, {
       -- Upper left
-      { -width, height, 0, 0, 0 },
+      vec3(-width,  height, 0, 0, 0),
       -- Upper right
-      { width, height, 0, 1, 0 },
+      vec3( width,  height, 0, 1, 0),
       -- Lower left
-      { -width, -height, 0, 0, 1 },
+      vec3(-width, -height, 0, 0, 1),
       -- Lower right
-      { width, -height, 0, 1, 1 },
+      vec3( width, -height, 0, 1, 1)
     }, {
       1, 2, 3,
       3, 2, 4
@@ -86,35 +88,35 @@ local Cube = defineClass(Shape, {
     depth = depth or 1
     Shape.init(self, {
       -- Front face
-      { -width, height, depth, 0, 0 },
-      { width, height, depth, 1, 0 },
-      { -width, -height, depth, 0, 1 },
-      { width, -height, depth, 1, 1 },
+      vec3(-width,  height,  depth, 0, 0),
+      vec3( width,  height,  depth, 1, 0),
+      vec3(-width, -height,  depth, 0, 1),
+      vec3( width, -height,  depth, 1, 1),
       -- Back face
-      { width, height, -depth, 0, 0 },
-      { -width, height, -depth, 1, 0 },
-      { width, -height, -depth, 0, 1 },
-      { -width, -height, -depth, 1, 1 },
+      vec3( width,  height, -depth, 0, 0),
+      vec3(-width,  height, -depth, 1, 0),
+      vec3( width, -height, -depth, 0, 1),
+      vec3(-width, -height, -depth, 1, 1),
       -- Top face
-      { -width, height, -depth, 0, 0 },
-      { width, height, -depth, 1, 0 },
-      { -width, height, depth, 0, 1 },
-      { width, height, depth, 1, 1 },
+      vec3(-width,  height, -depth, 0, 0),
+      vec3( width,  height, -depth, 1, 0),
+      vec3(-width,  height,  depth, 0, 1),
+      vec3( width,  height,  depth, 1, 1),
       -- Bottom face
-      { -width, -height, depth, 0, 0 },
-      { width, -height, depth, 1, 0 },
-      { -width, -height, -depth, 0, 1 },
-      { width, -height, -depth, 1, 1 },
+      vec3(-width, -height,  depth, 0, 0),
+      vec3( width, -height,  depth, 1, 0),
+      vec3(-width, -height, -depth, 0, 1),
+      vec3( width, -height, -depth, 1, 1),
       -- Left face
-      { -width, height, -depth, 0, 0 },
-      { -width, height, depth, 1, 0 },
-      { -width, -height, -depth, 0, 1 },
-      { -width, -height, depth, 1, 1 },
+      vec3(-width,  height, -depth, 0, 0),
+      vec3(-width,  height,  depth, 1, 0),
+      vec3(-width, -height, -depth, 0, 1),
+      vec3(-width, -height,  depth, 1, 1),
       -- Right face
-      { width, height, depth, 0, 0 },
-      { width, height, -depth, 1, 0 },
-      { width, -height, depth, 0, 1 },
-      { width, -height, -depth, 1, 1 },
+      vec3( width,  height,  depth, 0, 0),
+      vec3( width,  height, -depth, 1, 0),
+      vec3( width, -height,  depth, 0, 1),
+      vec3( width, -height, -depth, 1, 1)
     }, {
       1, 2, 3, 3, 2, 4,
       5, 6, 7, 7, 6, 8,
@@ -131,57 +133,57 @@ local Arrow = defineClass(Shape, {
   init = function(self, length)
     length = length or 1
     local a = 0.025
-    local b = 0.05
-    local c = length - 0.25
+    local b = 0.1
+    local c = length - 0.35
     local d = length
     Shape.init(self, {
       -- Back face
-      { a, a, 0, 0, 0 },
-      { -a, a, 0, 1, 0 },
-      { a, -a, 0, 0, 1 },
-      { -a, -a, 0, 1, 1 },
+      vec3( a,  a,  0),
+      vec3(-a,  a,  0),
+      vec3( a, -a,  0),
+      vec3(-a, -a,  0),
       -- Top face
-      { -a, a, 0, 0, 0 },
-      { a, a, 0, 1, 0 },
-      { -a, a, c, 0, 1 },
-      { a, a, c, 1, 1 },
+      vec3(-a,  a,  0),
+      vec3( a,  a,  0),
+      vec3(-a,  a,  c),
+      vec3( a,  a,  c),
       -- Bottom face
-      { -a, -a, c, 0, 0 },
-      { a, -a, c, 1, 0 },
-      { -a, -a, 0, 0, 1 },
-      { a, -a, 0, 1, 1 },
+      vec3(-a, -a,  c),
+      vec3( a, -a,  c),
+      vec3(-a, -a,  0),
+      vec3( a, -a,  0),
       -- Left face
-      { -a, a, 0, 0, 0 },
-      { -a, a, c, 1, 0 },
-      { -a, -a, 0, 0, 1 },
-      { -a, -a, c, 1, 1 },
+      vec3(-a,  a,  0),
+      vec3(-a,  a,  c),
+      vec3(-a, -a,  0),
+      vec3(-a, -a,  c),
       -- Right face
-      { a, a, c, 0, 0 },
-      { a, a, 0, 1, 0 },
-      { a, -a, c, 0, 1 },
-      { a, -a, 0, 1, 1 },
+      vec3( a,  a,  c),
+      vec3( a,  a,  0),
+      vec3( a, -a,  c),
+      vec3( a, -a,  0),
       -- Point
-      { 0, 0, d },
-      { -b, b, c },
-      { b, b, c },
-      { 0, 0, d },
-      { b, -b, c },
-      { -b, -b, c },
-      { 0, 0, d },
-      { -b, -b, c },
-      { -b, b, c },
-      { 0, 0, d },
-      { b, b, c },
-      { b, -b, c },
+      vec3( 0,  0,  d),
+      vec3(-b,  b,  c),
+      vec3( b,  b,  c),
+      vec3( 0,  0,  d),
+      vec3( b, -b,  c),
+      vec3(-b, -b,  c),
+      vec3( 0,  0,  d),
+      vec3(-b, -b,  c),
+      vec3(-b,  b,  c),
+      vec3( 0,  0,  d),
+      vec3( b,  b,  c),
+      vec3( b, -b,  c),
       -- Back of point
-      { a, a, c },
-      { -a, a, c },
-      { a, -a, c },
-      { -a, -a, c },
-      { b, b, c },
-      { -b, b, c },
-      { b, -b, c },
-      { -b, -b, c }
+      vec3( a,  a,  c),
+      vec3(-a,  a,  c),
+      vec3( a, -a,  c),
+      vec3(-a, -a,  c),
+      vec3( b,  b,  c),
+      vec3(-b,  b,  c),
+      vec3( b, -b,  c),
+      vec3(-b, -b,  c)
     }, {
       -- Faces
       1, 2, 3, 3, 2, 4,
@@ -209,66 +211,66 @@ local Icosahedron = defineClass(Shape, {
     local a = 1
     local b = 1 / ((1 + math.sqrt(5)) / 2)
     Shape.init(self, {
-      { -a,  0,  b },
-      { -b,  a,  0 },
-      {  0,  b,  a },
-      {  0,  b,  a },
-      { -b,  a,  0 },
-      {  b,  a,  0 },
-      {  b,  a,  0 },
-      { -b,  a,  0 },
-      {  0,  b, -a },
-      {  0,  b, -a },
-      { -b,  a,  0 },
-      { -a,  0, -b },
-      { -a,  0, -b },
-      { -b,  a,  0 },
-      { -a,  0,  b },
-      {  0,  b,  a },
-      {  b,  a,  0 },
-      {  a,  0,  b },
-      { -a,  0,  b },
-      {  0,  b,  a },
-      {  0, -b,  a },
-      { -a,  0, -b },
-      { -a,  0,  b },
-      { -b, -a,  0 },
-      {  0,  b, -a },
-      { -a,  0, -b },
-      {  0, -b, -a },
-      {  b,  a,  0 },
-      {  0,  b, -a },
-      {  a,  0, -b },
-      {  a,  0,  b },
-      {  b, -a,  0 },
-      {  0, -b,  a },
-      {  0, -b,  a },
-      {  b, -a,  0 },
-      { -b, -a,  0 },
-      { -b, -a,  0 },
-      {  b, -a,  0 },
-      {  0, -b, -a },
-      {  0, -b, -a },
-      {  b, -a,  0 },
-      {  a,  0, -b },
-      {  a,  0, -b },
-      {  b, -a,  0 },
-      {  a,  0,  b },
-      {  a,  0,  b },
-      {  0, -b,  a },
-      {  0,  b,  a },
-      {  0, -b,  a },
-      { -b, -a,  0 },
-      { -a,  0,  b },
-      { -b, -a,  0 },
-      {  0, -b, -a },
-      { -a,  0, -b },
-      {  0, -b, -a },
-      {  a,  0, -b },
-      {  0,  b, -a },
-      {  a,  0, -b },
-      {  a,  0,  b },
-      {  b,  a,  0 }
+      vec3(-a,  0,  b),
+      vec3(-b,  a,  0),
+      vec3( 0,  b,  a),
+      vec3( 0,  b,  a),
+      vec3(-b,  a,  0),
+      vec3( b,  a,  0),
+      vec3( b,  a,  0),
+      vec3(-b,  a,  0),
+      vec3( 0,  b, -a),
+      vec3( 0,  b, -a),
+      vec3(-b,  a,  0),
+      vec3(-a,  0, -b),
+      vec3(-a,  0, -b),
+      vec3(-b,  a,  0),
+      vec3(-a,  0,  b),
+      vec3( 0,  b,  a),
+      vec3( b,  a,  0),
+      vec3( a,  0,  b),
+      vec3(-a,  0,  b),
+      vec3( 0,  b,  a),
+      vec3( 0, -b,  a),
+      vec3(-a,  0, -b),
+      vec3(-a,  0,  b),
+      vec3(-b, -a,  0),
+      vec3( 0,  b, -a),
+      vec3(-a,  0, -b),
+      vec3( 0, -b, -a),
+      vec3( b,  a,  0),
+      vec3( 0,  b, -a),
+      vec3( a,  0, -b),
+      vec3( a,  0,  b),
+      vec3( b, -a,  0),
+      vec3( 0, -b,  a),
+      vec3( 0, -b,  a),
+      vec3( b, -a,  0),
+      vec3(-b, -a,  0),
+      vec3(-b, -a,  0),
+      vec3( b, -a,  0),
+      vec3( 0, -b, -a),
+      vec3( 0, -b, -a),
+      vec3( b, -a,  0),
+      vec3( a,  0, -b),
+      vec3( a,  0, -b),
+      vec3( b, -a,  0),
+      vec3( a,  0,  b),
+      vec3( a,  0,  b),
+      vec3( 0, -b,  a),
+      vec3( 0,  b,  a),
+      vec3( 0, -b,  a),
+      vec3(-b, -a,  0),
+      vec3(-a,  0,  b),
+      vec3(-b, -a,  0),
+      vec3( 0, -b, -a),
+      vec3(-a,  0, -b),
+      vec3( 0, -b, -a),
+      vec3( a,  0, -b),
+      vec3( 0,  b, -a),
+      vec3( a,  0, -b),
+      vec3( a,  0,  b),
+      vec3( b,  a,  0)
     })
   end
 })
@@ -287,21 +289,21 @@ local Sphere = defineClass(Icosahedron, {
       local subdividedVertices = {}
       for i = 1, #self.vertices, 3 do
         local v1, v2, v3 = self.vertices[i], self.vertices[i + 1], self.vertices[i + 2]
-        local midpoint1 = { (v1[1] + v2[1]) / 2, (v1[2] + v2[2]) / 2, (v1[3] + v2[3]) / 2 }
-        local midpoint2 = { (v2[1] + v3[1]) / 2, (v2[2] + v3[2]) / 2, (v2[3] + v3[3]) / 2 }
-        local midpoint3 = { (v1[1] + v3[1]) / 2, (v1[2] + v3[2]) / 2, (v1[3] + v3[3]) / 2 }
-        table.insert(subdividedVertices, midpoint1)
-        table.insert(subdividedVertices, midpoint2)
-        table.insert(subdividedVertices, midpoint3)
-        table.insert(subdividedVertices, vec3.clone({}, v1))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint1))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint3))
-        table.insert(subdividedVertices, vec3.clone({}, v2))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint2))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint1))
-        table.insert(subdividedVertices, vec3.clone({}, v3))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint3))
-        table.insert(subdividedVertices, vec3.clone({}, midpoint2))
+        vecPool1:averageVec3(v1, v2)
+        vecPool2:averageVec3(v2, v3)
+        vecPool3:averageVec3(v1, v3)
+        table.insert(subdividedVertices, vecPool1:clone())
+        table.insert(subdividedVertices, vecPool2:clone())
+        table.insert(subdividedVertices, vecPool3:clone())
+        table.insert(subdividedVertices, vec3.clone(v1))
+        table.insert(subdividedVertices, vecPool1:clone())
+        table.insert(subdividedVertices, vecPool3:clone())
+        table.insert(subdividedVertices, vec3.clone(v2))
+        table.insert(subdividedVertices, vecPool2:clone())
+        table.insert(subdividedVertices, vecPool1:clone())
+        table.insert(subdividedVertices, vec3.clone(v3))
+        table.insert(subdividedVertices, vecPool3:clone())
+        table.insert(subdividedVertices, vecPool2:clone())
       end
       self.vertices = subdividedVertices
       -- Move all the new vertices to be on the unit ciircle

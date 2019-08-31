@@ -15,9 +15,6 @@ love.graphics.setCanvas(DEFAULT_TEXTURE)
 love.graphics.clear(0, 0, 0)
 love.graphics.setCanvas()
 
--- Create vertex pools for calculating normals
-local tempNormal1, tempNormal2 = cpml.vec3.new(), cpml.vec3.new()
-
 local Model = defineClass({
   pos = nil,
   rotation = nil,
