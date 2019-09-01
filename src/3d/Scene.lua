@@ -27,6 +27,7 @@ local Scene = defineClass({
   end,
   draw = function(self)
     -- Clear the canvas
+    love.graphics.setDepthMode('lequal', true)
     love.graphics.setCanvas({ self.canvas, depth = true })
     love.graphics.setColor(1, 1, 1)
     love.graphics.clear(0, 0, 0, 0)

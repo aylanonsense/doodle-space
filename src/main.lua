@@ -16,7 +16,6 @@ function love.load()
   enableMouseLook = false
 
   -- Set some graphics values
-  love.graphics.setDepthMode('lequal', true)
   love.graphics.setDefaultFilter('nearest', 'nearest')
   love.graphics.setBackgroundColor(0.92, 0.57, 0.69)
 
@@ -43,6 +42,7 @@ function love.update(dt)
   local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
   local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
   local upwardMovement = (love.keyboard.isDown('space') and 1 or 0) - (love.keyboard.isDown('lctrl') and 1 or 0)
+  local spin = (love.keyboard.isDown('v') and 1 or 0) - (love.keyboard.isDown('c') and 1 or 0)
 
   -- Move the camera
   local speed = love.keyboard.isDown('lshift') and 15 or 3
@@ -53,7 +53,10 @@ function love.update(dt)
   if upwardMovement ~= 0 then
     scene.camera:translate(0, upwardMovement * speed * dt, 0)
   end
-  if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 then
+  if spin ~= 0 then
+    scene.camera:rotate(0, 0, 3 * spin * CAMERA_SENSITIVITY / 100)
+  end
+  if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 or spin ~= 0 then
     scene.camera:calculateTransform()
   end
 end
@@ -68,9 +71,12 @@ function love.mousemoved(x, y, dx, dy)
 end
 
 function love.mousepressed()
-  local focus = scene.camera
-  local dir = vec3():angleToDir(focus.rotation)
-  scene:addArrowInDirection(focus.position, dir, 5)
+  -- Add an arrow to the scene whenever the mouse is clicked
+  if enableMouseLook then
+    local focus = scene.camera
+    local dir = vec3():angleToDir(focus.rotation)
+    scene:addArrowInDirection(focus.position, dir, 5)
+  end
 end
 
 function love.keypressed(btn)
