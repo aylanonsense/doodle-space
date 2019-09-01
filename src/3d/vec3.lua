@@ -102,12 +102,12 @@ vec3 = {
     return out
   end,
   -- Conversion functions
-  dirToModelAngle = function(out, dir)
+  dirToAngle = function(out, dir)
     local len = sqrt(dir[1] * dir[1] + dir[2] * dir[2] + dir[3] * dir[3])
     out[1], out[2], out[3] = -math.asin(dir[2] / len), math.atan2(dir[1] / len, dir[3] / len), out[3] or 0
     return out
   end,
-  modelAngleToDir = function(out, angle)
+  angleToDir = function(out, angle)
     -- Prepare a transformation matrix
     tempMat4:identity()
     tempMat4:rotate(tempMat4, angle[2], cpml.vec3.unit_y)

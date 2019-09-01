@@ -2,7 +2,7 @@ local vec3 = require('3d/vec3')
 local defineClass = require('utils/defineClass')
 local tableUtils = require('utils/table')
 
--- Vertex pool for calculations
+-- Object pool
 local vecPool1, vecPool2, vecPool3 = vec3(), vec3(), vec3()
 
 local Shape = defineClass({

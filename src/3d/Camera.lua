@@ -1,8 +1,12 @@
 local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
+local vec3 = require('3d/vec3')
+
+-- Object pool
+local tempVec3 = vec3()
 
 local Camera = defineClass({
-  pos = nil,
+  position = nil,
   rotation = nil,
   perspective = nil,
   transform = nil,
@@ -11,28 +15,53 @@ local Camera = defineClass({
   nearClip = 0.1,
   farClip = 10000,
   init = function(self, aspectRatio)
-    self.pos = cpml.vec3(0, 0, 0)
-    self.rotation = cpml.vec3(0, 0, 0)
+    self.position = vec3(0, 0, 0)
+    self.rotation = vec3(0, 0, 0)
     self.aspectRatio = aspectRatio or self.aspectRatio
 
     -- Calculate the perspective and transformation matrix
     self:calculatePerspective()
+    self.transform = cpml.mat4()
     self:calculateTransform()
   end,
   setPosition = function(self, x, y, z)
-    self.pos.x, self.pos.y, self.pos.z = x, y, z
+    if y or z then
+      self.position:setValues(x, y, z)
+    else
+      self.position:set(x)
+    end
     return self
   end,
   translate = function(self, x, y, z)
-    self.pos.x, self.pos.y, self.pos.z = self.pos.x + x, self.pos.y + y, self.pos.z + z
+    if y or z  then
+      self.position:addValues(self.position, x, y, z)
+    else
+      self.position:add(x)
+    end
     return self
   end,
   setRotation = function(self, x, y, z)
-    self.rotation.x, self.rotation.y, self.rotation.z = x, y, z
+    if y or z then
+      self.rotation:setValues(x, y, z)
+    else
+      self.rotation:set(x)
+    end
     return self
   end,
   rotate = function(self, x, y, z)
-    self.rotation.x, self.rotation.y, self.rotation.z = self.rotation.x + x, self.rotation.y + y, self.rotation.z + z
+    if y or z then
+      self.rotation:addValues(self.rotation, x, y, z)
+    else
+      self.rotation:add(self.rotation, x)
+    end
+    return self
+  end,
+  setDirection = function(self, x, y, z)
+    if y or z then
+      self.rotation:dirToModelAngle(vec3(x, y, z)) -- Unnecessarily makes an extra object
+    else
+      self.rotation:dirToModelAngle(x)
+    end
     return self
   end,
   setAspectRatio = function(self, aspectRatio)
@@ -45,11 +74,12 @@ local Camera = defineClass({
     return self
   end,
   calculateTransform = function(self)
-    self.transform = cpml.mat4()
-    self.transform:rotate(self.transform, self.rotation.y, cpml.vec3.unit_x)
-    self.transform:rotate(self.transform, self.rotation.x, cpml.vec3.unit_y)
-    self.transform:rotate(self.transform, self.rotation.z, cpml.vec3.unit_z)
-    self.transform:translate(self.transform, -self.pos)
+    self.transform:identity()
+    self.transform:rotate(self.transform, self.rotation[3], cpml.vec3.unit_z)
+    self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
+    self.transform:rotate(self.transform, math.pi - self.rotation[2], cpml.vec3.unit_y)
+    tempVec3:multiplyValues(self.position, -1, -1, -1)
+    self.transform:translate(self.transform, tempVec3)
     self.transform:transpose(self.transform)
     self.transform:mul(self.perspective, self.transform)
     return self

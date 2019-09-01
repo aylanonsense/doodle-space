@@ -51,6 +51,14 @@ local Scene = defineClass({
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(self.canvas, 0, 0, 0, 1, -1, 0, self.height) -- why is it upside down?
   end,
+  resize = function (self, width, height)
+    self.width = width
+    self.height = height
+    self.canvas = love.graphics.newCanvas(width, height)
+    self.camera:setAspectRatio(width / height)
+    self.camera:calculatePerspective()
+    self.camera:calculateTransform()
+  end,
   addModel = function (self, model)
     table.insert(self.models, model)
     return model
@@ -62,14 +70,6 @@ local Scene = defineClass({
         break;
       end
     end
-  end,
-  resize = function (self, width, height)
-    self.width = width
-    self.height = height
-    self.canvas = love.graphics.newCanvas(width, height)
-    self.camera:setAspectRatio(width / height)
-    self.camera:calculatePerspective()
-    self.camera:calculateTransform()
   end,
   addArrowBetweenPoints = function(self, pt1, pt2)
     local diff = vec3.subtract(vec3(), pt2, pt1)

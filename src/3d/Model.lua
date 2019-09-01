@@ -99,18 +99,18 @@ local Model = defineClass({
   end,
   setDirection = function(self, x, y, z)
     if y or z then
-      self.rotation:dirToModelAngle({ x, y, z }) -- Unnecessarily makes an extra object
+      self.rotation:dirToAngle(vec3(x, y, z)) -- Unnecessarily makes an extra object
     else
-      self.rotation:dirToModelAngle(x)
+      self.rotation:dirToAngle(x)
     end
     return self
   end,
   calculateTransform = function(self)
     self.transform:identity()
     self.transform:translate(self.transform, self.position)
-    self.transform:rotate(self.transform, self.rotation.y, cpml.vec3.unit_y)
-    self.transform:rotate(self.transform, self.rotation.x, cpml.vec3.unit_x)
-    self.transform:rotate(self.transform, self.rotation.z, cpml.vec3.unit_z)
+    self.transform:rotate(self.transform, self.rotation[2], cpml.vec3.unit_y)
+    self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
+    self.transform:rotate(self.transform, self.rotation[3], cpml.vec3.unit_z)
     self.transform:scale(self.transform, self.scale)
     self.transform:transpose(self.transform)
     self.transformInverse:invert(self.transform)
