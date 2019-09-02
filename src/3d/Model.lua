@@ -22,6 +22,7 @@ local Model = defineClass({
   unitX = nil,
   unitY = nil,
   unitZ = nil,
+  axisRotation = nil,
   transform = nil,
   transformInverse = nil,
   mesh = nil,
@@ -41,9 +42,10 @@ local Model = defineClass({
     if shape.vertexMap then
       self.mesh:setVertexMap(shape.vertexMap)
     end
-    self.mesh:setTexture(texture or textures.grey)
+    self.mesh:setTexture(texture or textures.black)
 
     -- Calculate the transformation matrix
+    self.axisRotation = vec3():dirToAngle(self.unitZ, self.unitY)
     self.transform = cpml.mat4()
     self.transformInverse = cpml.mat4()
     self:calculateTransform()
@@ -65,8 +67,26 @@ local Model = defineClass({
     if y or z  then
       self.position:addValues(self.position, x, y, z)
     else
-      self.position:add(x)
+      self.position:add(self.position, x)
     end
+    return self
+  end,
+  translateRelative = function(self, x, y, z)
+    local mat = cpml.mat4()
+    mat:identity()
+    -- Apply change of unit vectors
+    mat:rotate(mat, self.axisRotation[2], cpml.vec3.unit_y)
+    mat:rotate(mat, self.axisRotation[1], cpml.vec3.unit_x)
+    mat:rotate(mat, self.axisRotation[3], cpml.vec3.unit_z)
+    -- Apply to position
+    local vec4
+    if y or z then
+      vec4 = { x, y, z, 1 }
+    else
+      vec4 = { x[1], x[2], x[3], 1 }
+    end
+    cpml.mat4.mul_vec4(vec4, mat, vec4)
+    self:translate(vec4[1], vec4[2], vec4[3])
     return self
   end,
   setRotation = function(self, x, y, z)
@@ -101,7 +121,7 @@ local Model = defineClass({
     end
     return self
   end,
-  setDirection = function(self, x, y, z)
+  setDirection = function(self, x, y, z) -- TDOO label this as relative, make an absolute
     if y or z then
       self.rotation:dirToAngle(vec3(x, y, z)) -- Unnecessarily makes an extra object
     else
@@ -117,17 +137,17 @@ local Model = defineClass({
     self.unitX:normalize(self.unitX)
     self.unitZ:cross(self.unitX, self.unitY)
     self.unitZ:normalize(self.unitZ)
+    self.axisRotation:dirToAngle(self.unitZ, self.unitY)
     return self
   end,
   calculateTransform = function(self)
     self.transform:identity()
     -- Apply position
     self.transform:translate(self.transform, self.position)
-    -- Apply change of unit vetors
-    local unitRotation = tempVec:dirToAngle(self.unitZ, self.unitY)
-    self.transform:rotate(self.transform, unitRotation[2], cpml.vec3.unit_y)
-    self.transform:rotate(self.transform, unitRotation[1], cpml.vec3.unit_x)
-    self.transform:rotate(self.transform, unitRotation[3], cpml.vec3.unit_z)
+    -- Apply change of unit vectors
+    self.transform:rotate(self.transform, self.axisRotation[2], cpml.vec3.unit_y)
+    self.transform:rotate(self.transform, self.axisRotation[1], cpml.vec3.unit_x)
+    self.transform:rotate(self.transform, self.axisRotation[3], cpml.vec3.unit_z)
     -- Apply rotation
     self.transform:rotate(self.transform, self.rotation[2], cpml.vec3.unit_y)
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)

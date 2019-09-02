@@ -64,7 +64,8 @@ local n = 0
 function love.update(dt)
   n = n + dt
   -- obj:setUpVector({ 0.0, 1, n }):calculateTransform()
-  obj:rotate({ dt, 0, 0 }):calculateTransform()
+  -- obj:rotate({ dt, 0, 0 }):calculateTransform()
+  obj:translateRelative({ 0, 0, dt }):calculateTransform()
   -- scene:addArrowInDirection(obj.position, obj.unitX, 5)
   -- scene:addArrowInDirection(obj.position, obj.unitY, 5)
   -- scene:addArrowInDirection(obj.position, obj.unitZ, 5)
