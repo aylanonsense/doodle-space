@@ -13,7 +13,7 @@ local VERTEX_FORMAT = {
 local POLYGON_FORMAT = 'triangles'
 
 -- Objet pool
-local tempUnitVec3 = cpml.vec3()
+local tempVec = vec3()
 
 local Model = defineClass({
   position = nil,
@@ -121,37 +121,20 @@ local Model = defineClass({
   end,
   calculateTransform = function(self)
     self.transform:identity()
+    -- Apply position
     self.transform:translate(self.transform, self.position)
-
-
-    -- local tempMat4 = cpml.mat4.identity()
-    -- tempMat4:rotate(tempMat4, math.pi / 2, cpml.vec3.unit_x)
-    -- local tempVec4 = {}
-    -- tempVec4[1], tempVec4[2], tempVec4[3], tempVec4[4] = self.unitY[1], self.unitY[2], self.unitY[3], 1
-    -- cpml.mat4.mul_vec4(tempVec4, tempMat4, tempVec4)
-    -- local tempVec3 = vec3(tempVec4[1], tempVec4[2], tempVec4[3])
-    -- tempVec3:dirToAngle(tempVec3)
-    -- print(tempVec3)
-
-
-    -- yes?
-    -- TODO properly acount for unit vector rotation
-    local unitRotation = vec3():dirToAngle(self.unitZ, self.unitY)
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitY[1], self.unitY[2], self.unitY[3]
+    -- Apply change of unit vetors
+    local unitRotation = tempVec:dirToAngle(self.unitZ, self.unitY)
     self.transform:rotate(self.transform, unitRotation[2], cpml.vec3.unit_y)
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitX[1], self.unitX[2], self.unitX[3]
     self.transform:rotate(self.transform, unitRotation[1], cpml.vec3.unit_x)
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitZ[1], self.unitZ[2], self.unitZ[3]
-    self.transform:rotate(self.transform, unitRotation[3], cpml.vec3.unit_z) -- sometimes negative?
-
-
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitY[1], self.unitY[2], self.unitY[3]
+    self.transform:rotate(self.transform, unitRotation[3], cpml.vec3.unit_z)
+    -- Apply rotation
     self.transform:rotate(self.transform, self.rotation[2], cpml.vec3.unit_y)
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitX[1], self.unitX[2], self.unitX[3]
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
-    -- tempUnitVec3.x, tempUnitVec3.y, tempUnitVec3.z = self.unitZ[1], self.unitZ[2], self.unitZ[3]
     self.transform:rotate(self.transform, self.rotation[3], cpml.vec3.unit_z)
+    -- Apply scale
     self.transform:scale(self.transform, self.scale)
+    -- Finish
     self.transform:transpose(self.transform)
     self.transformInverse:invert(self.transform)
     self.transformInverse:transpose(self.transformInverse)
