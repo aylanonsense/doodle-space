@@ -4,6 +4,7 @@ local Camera = require('3d/Camera')
 local Shape = require('3d/Shape')
 local Model = require('3d/Model')
 local vec3 = require('3d/vec3')
+local textures = require('3d/textures')
 
 local THREE_DIMENSIONAL_SHADER = love.graphics.newShader('../shaders/three-dimensional.shader')
 
@@ -72,11 +73,11 @@ local Scene = defineClass({
       end
     end
   end,
-  addArrowBetweenPoints = function(self, pt1, pt2)
+  addArrowBetweenPoints = function(self, pt1, pt2, texture)
     local diff = vec3.subtract(vec3(), pt2, pt1)
     -- Create an arrow of the correct length
     local shape = Shape.Arrow:new(diff:length())
-    local model = Model:new(shape)
+    local model = Model:new(shape, texture or textures.black)
     -- Position it at the start point and point it towards the end point
     model:setPosition(pt1)
     model:setDirection(diff)
@@ -84,10 +85,10 @@ local Scene = defineClass({
     -- Add the arrow to the scene
     return self:addModel(model)
   end,
-  addArrowInDirection = function(self, pos, dir, length)
+  addArrowInDirection = function(self, pos, dir, length, texture)
     -- Create an arrow of the correct length
     local shape = Shape.Arrow:new(length or 1)
-    local model = Model:new(shape)
+    local model = Model:new(shape, texture or textures.black)
     -- Position it at the start point and point it in the right direction
     model:setPosition(pos)
     model:setDirection(dir)
