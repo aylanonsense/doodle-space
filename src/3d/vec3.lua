@@ -5,7 +5,8 @@ local vec3
 
 -- Object pool
 local tempMat = cpml.mat4()
-local tempObj = {}
+local tempTransformObj = {}
+local tempAngleVec
 local tempVec1, tempVec2, tempVec3
 local unitX, unitY, unitZ
 
@@ -106,6 +107,10 @@ vec3 = {
     out[1], out[2], out[3] = v1[2] * v2[3] - v1[3] * v2[2], v1[3] * v2[1] - v1[1] * v2[3], v1[1] * v2[2] - v1[2] * v2[1]
     return out
   end,
+  crossValues = function(out, v, x, y, z)
+    out[1], out[2], out[3] = v[2] * z - v[3] * y, v[3] * x - v[1] * z, v[1] * y - v[2] * x
+    return out
+  end,
   dot = function(v1, v2)
     return v1[1] * v2[1] + v1[2] * v2[2] + v1[3] * v2[3]
   end,
@@ -120,7 +125,13 @@ vec3 = {
     local dot = vec3.dot(v1, v2)
     local len1 = vec3.length(v1)
     local len2 = vec3.length(v2)
-    return math.acos(dot / (len1 * len2))
+    local angle = math.acos(dot / (len1 * len2))
+    -- If the acos is NaN or infiniity, it means there's 0 angle between them
+    if angle ~= angle then
+      return 0
+    else
+      return angle
+    end
   end,
   -- Conversion functions
   dirToAngle = function(out, dir, up)
@@ -139,24 +150,26 @@ vec3 = {
         angleX = (dirNormalized[2] < 0 and 1 or -1) * math.pi / 2
         -- It's hard to tell how much we've rotated left/right (TODO can we do better?)
         angleY = 0
+        -- It's also hard to tell how much we've rolled clockwise/counter-clockwise
+        angleZ = 0
       else
         -- The angle between the projection and the actual vector is the amount you need to turn up/down
         angleX = vec3.angleBetween(dirProjectionXZ, dirNormalized) * (unitY:dot(dirNormalized) < 0 and 1 or -1)
         -- The angle between the projection and the unit z vector is the amount you need to turn left/right
         local cross = tempVec3:cross(dirProjectionXZ, unitZ)
         angleY = dirProjectionXZ:angleBetween(unitZ) * (cross:dot(unitY) < 0 and 1 or -1)
-      end
-      if up then
-        -- TODO handle poiinting directly up/down?
-        -- Project the unit Y vector onto the plane of the vector
-        local unitYProjectDir = tempVec2:project(unitY, dirNormalized)
-        unitYProjectDir:subtract(unitY, unitYProjectDir)
-        -- The angle between the projected unit Y vector and the up vector is the amount you need to roll clockwise/counter-clockwise
-        local cross = tempVec3:cross(unitYProjectDir, up)
-        angleZ = unitYProjectDir:angleBetween(up) * (cross:dot(dirNormalized) < 0 and -1 or 1)
-      else
-        -- Without an up vector, it's hard to tell how much to roll (TODO can we do better?)
-        angleZ = 0
+        if up then
+          -- TODO handle pointing directly up/down?
+          -- Project the unit Y vector onto the plane of the vector
+          local unitYProjectDir = tempVec2:project(unitY, dirNormalized)
+          unitYProjectDir:subtract(unitY, unitYProjectDir)
+          -- The angle between the projected unit Y vector and the up vector is the amount you need to roll clockwise/counter-clockwise
+          local cross = tempVec3:cross(unitYProjectDir, up)
+          angleZ = unitYProjectDir:angleBetween(up) * (cross:dot(dirNormalized) < 0 and -1 or 1)
+        else
+          -- Without an up vector, it's hard to tell how much to roll (TODO can we do better?)
+          angleZ = 0
+        end
       end
       out[1], out[2], out[3] = angleX, angleY, angleZ
     end
@@ -168,9 +181,13 @@ vec3 = {
     transform:rotate(transform, angle[2], cpml.vec3.unit_y)
     transform:rotate(transform, angle[1], cpml.vec3.unit_x)
     transform:rotate(transform, angle[3], cpml.vec3.unit_z)
-    -- Multiply it with a unit vec4
-    local vec4 = tempObj
-    vec4[1], vec4[2], vec4[3], vec4[4] = 0, 0, 1, 1
+    -- Multiply it by a unit vector
+    tempAngleVec:setValues(0, 0, 1)
+    return vec3.applyTransform(out, tempAngleVec, transform)
+  end,
+  applyTransform = function(out, v, transform)
+    local vec4 = tempTransformObj
+    vec4[1], vec4[2], vec4[3], vec4[4] = v[1], v[2], v[3], 1
     cpml.mat4.mul_vec4(vec4, transform, vec4)
     out[1], out[2], out[3] = vec4[1], vec4[2], vec4[3]
     return out
@@ -186,6 +203,7 @@ setmetatable(vec3, {
 
 -- Initialize object pool
 unitX, unitY, unitZ = vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)
+tempAngleVec = vec3()
 tempVec1, tempVec2, tempVec3 = vec3(), vec3(), vec3()
 
 return vec3

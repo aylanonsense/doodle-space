@@ -316,4 +316,148 @@ local Sphere = defineClass(Icosahedron, {
 })
 Shape.Sphere = Sphere:new(2)
 
+local CubePerson = defineClass(Shape, {
+  init = function(self)
+    local bodyTopLeft = -1
+    local bodyTopRight = 1
+    local bodyBottomLeft = -0.6
+    local bodyBottomRight = 0.6
+    local bodyTop = 0.1
+    local bodyBottom = -1.0
+    local bodyFront = 0.4
+    local bodyBack = -0.4
+
+    local headLeft = -0.4
+    local headRight = 0.4
+    local headTop = 1.0
+    local headBottom = 0.2
+    local headFront = 0.4
+    local headBack = -0.4
+
+    local armLeft = -0.9
+    local armRight = -0.4
+    local armTop = 0.1
+    local armBottom = -0.4
+    local armFront = 2.0
+    local armBack = 0.5
+
+    Shape.init(self, {
+      -- Body front face
+      vec3(bodyTopLeft,     bodyTop,    bodyFront, 0, 0),
+      vec3(bodyTopRight,    bodyTop,    bodyFront, 1, 0),
+      vec3(bodyBottomLeft,  bodyBottom, bodyFront, 0, 1),
+      vec3(bodyBottomRight, bodyBottom, bodyFront, 1, 1),
+      -- Body back face
+      vec3(bodyTopRight,    bodyTop,    bodyBack,  0, 0),
+      vec3(bodyTopLeft,     bodyTop,    bodyBack,  1, 0),
+      vec3(bodyBottomRight, bodyBottom, bodyBack,  0, 1),
+      vec3(bodyBottomLeft,  bodyBottom, bodyBack,  1, 1),
+      -- Body top face
+      vec3(bodyTopLeft,     bodyTop,    bodyBack,  0, 0),
+      vec3(bodyTopRight,    bodyTop,    bodyBack,  1, 0),
+      vec3(bodyTopLeft,     bodyTop,    bodyFront, 0, 1),
+      vec3(bodyTopRight,    bodyTop,    bodyFront, 1, 1),
+      -- Body bottom face
+      vec3(bodyBottomLeft,  bodyBottom, bodyFront, 0, 0),
+      vec3(bodyBottomRight, bodyBottom, bodyFront, 1, 0),
+      vec3(bodyBottomLeft,  bodyBottom, bodyBack,  0, 1),
+      vec3(bodyBottomRight, bodyBottom, bodyBack,  1, 1),
+      -- Body left face
+      vec3(bodyTopLeft,     bodyTop,    bodyBack,  0, 0),
+      vec3(bodyTopLeft,     bodyTop,    bodyFront, 1, 0),
+      vec3(bodyBottomLeft,  bodyBottom, bodyBack,  0, 1),
+      vec3(bodyBottomLeft,  bodyBottom, bodyFront, 1, 1),
+      -- Body right face
+      vec3(bodyTopRight,    bodyTop,    bodyFront, 0, 0),
+      vec3(bodyTopRight,    bodyTop,    bodyBack,  1, 0),
+      vec3(bodyBottomRight, bodyBottom, bodyFront, 0, 1),
+      vec3(bodyBottomRight, bodyBottom, bodyBack,  1, 1),
+
+      -- Head front face
+      vec3(headLeft,  headTop,    headFront, 0, 0),
+      vec3(headRight, headTop,    headFront, 1, 0),
+      vec3(headLeft,  headBottom, headFront, 0, 1),
+      vec3(headRight, headBottom, headFront, 1, 1),
+      -- Head back face
+      vec3(headRight, headTop,    headBack,  0, 0),
+      vec3(headLeft,  headTop,    headBack,  1, 0),
+      vec3(headRight, headBottom, headBack,  0, 1),
+      vec3(headLeft,  headBottom, headBack,  1, 1),
+      -- Head top face
+      vec3(headLeft,  headTop,    headBack,  0, 0),
+      vec3(headRight, headTop,    headBack,  1, 0),
+      vec3(headLeft,  headTop,    headFront, 0, 1),
+      vec3(headRight, headTop,    headFront, 1, 1),
+      -- Head bottom face
+      vec3(headLeft,  headBottom, headFront, 0, 0),
+      vec3(headRight, headBottom, headFront, 1, 0),
+      vec3(headLeft,  headBottom, headBack,  0, 1),
+      vec3(headRight, headBottom, headBack,  1, 1),
+      -- Head left face
+      vec3(headLeft,  headTop,    headBack,  0, 0),
+      vec3(headLeft,  headTop,    headFront, 1, 0),
+      vec3(headLeft,  headBottom, headBack,  0, 1),
+      vec3(headLeft,  headBottom, headFront, 1, 1),
+      -- Head right face
+      vec3(headRight, headTop,    headFront, 0, 0),
+      vec3(headRight, headTop,    headBack,  1, 0),
+      vec3(headRight, headBottom, headFront, 0, 1),
+      vec3(headRight, headBottom, headBack,  1, 1),
+
+      -- Arm front face
+      vec3(armLeft,  armTop,    armFront, 0, 0),
+      vec3(armRight, armTop,    armFront, 1, 0),
+      vec3(armLeft,  armBottom, armFront, 0, 1),
+      vec3(armRight, armBottom, armFront, 1, 1),
+      -- Arm back face
+      vec3(armRight, armTop,    armBack,  0, 0),
+      vec3(armLeft,  armTop,    armBack,  1, 0),
+      vec3(armRight, armBottom, armBack,  0, 1),
+      vec3(armLeft,  armBottom, armBack,  1, 1),
+      -- Arm top face
+      vec3(armLeft,  armTop,    armBack,  0, 0),
+      vec3(armRight, armTop,    armBack,  1, 0),
+      vec3(armLeft,  armTop,    armFront, 0, 1),
+      vec3(armRight, armTop,    armFront, 1, 1),
+      -- Arm bottom face
+      vec3(armLeft,  armBottom, armFront, 0, 0),
+      vec3(armRight, armBottom, armFront, 1, 0),
+      vec3(armLeft,  armBottom, armBack,  0, 1),
+      vec3(armRight, armBottom, armBack,  1, 1),
+      -- Arm left face
+      vec3(armLeft,  armTop,    armBack,  0, 0),
+      vec3(armLeft,  armTop,    armFront, 1, 0),
+      vec3(armLeft,  armBottom, armBack,  0, 1),
+      vec3(armLeft,  armBottom, armFront, 1, 1),
+      -- Arm right face
+      vec3(armRight, armTop,    armFront, 0, 0),
+      vec3(armRight, armTop,    armBack,  1, 0),
+      vec3(armRight, armBottom, armFront, 0, 1),
+      vec3(armRight, armBottom, armBack,  1, 1)
+    }, {
+      1, 2, 3, 3, 2, 4,
+      5, 6, 7, 7, 6, 8,
+      9, 10, 11, 11, 10, 12,
+      13, 14, 15, 15, 14, 16,
+      17, 18, 19, 19, 18, 20,
+      21, 22, 23, 23, 22, 24,
+
+      25, 26, 27, 27, 26, 28,
+      29, 30, 31, 31, 30, 32,
+      33, 34, 35, 35, 34, 36,
+      37, 38, 39, 39, 38, 40,
+      41, 42, 43, 43, 42, 44,
+      45, 46, 47, 47, 46, 48,
+
+      49, 50, 51, 51, 50, 52,
+      53, 54, 55, 55, 54, 56,
+      57, 58, 59, 59, 58, 60,
+      61, 62, 63, 63, 62, 64,
+      65, 66, 67, 67, 66, 68,
+      69, 70, 71, 71, 70, 72
+    })
+  end
+})
+Shape.CubePerson = CubePerson:new()
+
 return Shape

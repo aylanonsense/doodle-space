@@ -18,6 +18,7 @@ local Scene = defineClass({
   shader = nil,
   camera = nil,
   models = nil,
+  entities = nil,
   init = function(self, width, height)
     self.width = width
     self.height = height
@@ -25,6 +26,7 @@ local Scene = defineClass({
     self.shader = THREE_DIMENSIONAL_SHADER
     self.camera = Camera:new(width / height)
     self.models = {}
+    self.entities = {}
   end,
   draw = function(self)
     -- Clear the canvas
@@ -42,9 +44,13 @@ local Scene = defineClass({
 
     -- Render each model
     for _, model in ipairs(self.models) do
-      self.shader:send('model_transform', model.transform)
-      self.shader:send('model_transform_inverse', model.transformInverse)
-      model:draw()
+      model:draw(self.shader)
+    end
+    for _, entity in ipairs(self.entities) do
+      entity:draw(self.shader)
+      if entity.shouldDrawAxis then
+        entity:drawAxis(self.shader)
+      end
     end
 
     -- Copy the 3D render to the actual canvas
@@ -53,7 +59,7 @@ local Scene = defineClass({
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(self.canvas, 0, 0, 0, 1, -1, 0, self.height) -- why is it upside down?
   end,
-  resize = function (self, width, height)
+  resize = function(self, width, height)
     self.width = width
     self.height = height
     self.canvas = love.graphics.newCanvas(width, height)
@@ -61,11 +67,15 @@ local Scene = defineClass({
     self.camera:calculatePerspective()
     self.camera:calculateTransform()
   end,
-  addModel = function (self, model)
+  addEntity = function(self, entity)
+    table.insert(self.entities, entity)
+    return entity
+  end,
+  addModel = function(self, model)
     table.insert(self.models, model)
     return model
   end,
-  removeModel = function (self, model)
+  removeModel = function(self, model)
     for i, model2 in ipairs(self.models) do
       if model2 == model then
         table.remove(self.models, i)

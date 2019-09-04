@@ -50,7 +50,9 @@ local Model = defineClass({
     self.transformInverse = cpml.mat4()
     self:calculateTransform()
   end,
-  draw = function(self)
+  draw = function(self, shader)
+    shader:send('model_transform', self.transform)
+    shader:send('model_transform_inverse', self.transformInverse)
     love.graphics.setWireframe(self.isWireframe)
     love.graphics.setMeshCullMode(self.cullBackFacingPolygons and 'back' or 'none')
     love.graphics.draw(self.mesh)
