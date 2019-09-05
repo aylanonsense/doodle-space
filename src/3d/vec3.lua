@@ -6,7 +6,7 @@ local vec3
 -- Object pool
 local tempMat = cpml.mat4()
 local tempTransformObj = {}
-local tempAngleVec
+local tempAngleToDirVec, tempAngleBetweenVec, tempProjectOntoPlaneVec
 local tempVec1, tempVec2, tempVec3
 local unitX, unitY, unitZ
 
@@ -117,11 +117,17 @@ vec3 = {
   -- Returns the projection of v1 onto v2
   project = function(out, v1, v2)
     local dot = vec3.dot(v1, v2)
-    local len2 = vec3.length(v2)
+    local len2 = vec3.squareLength(v2)
     out[1], out[2], out[3] = v2[1] * dot / len2, v2[2] * dot / len2, v2[3] * dot / len2
     return out
   end,
-  angleBetween = function(v1, v2)
+  projectOntoPlane = function(out, v1, normal)
+    tempProjectOntoPlaneVec:project(v1, normal)
+    tempProjectOntoPlaneVec:subtract(v1, tempProjectOntoPlaneVec)
+    out[1], out[2], out[3] = tempProjectOntoPlaneVec[1], tempProjectOntoPlaneVec[2], tempProjectOntoPlaneVec[3]
+    return out
+  end,
+  angleBetween = function(v1, v2, positiveVector)
     local dot = vec3.dot(v1, v2)
     local len1 = vec3.length(v1)
     local len2 = vec3.length(v2)
@@ -129,6 +135,10 @@ vec3 = {
     -- If the acos is NaN or infiniity, it means there's 0 angle between them
     if angle ~= angle then
       return 0
+    -- Figure out if the angle should be positive or negative
+    elseif positiveVector then
+      tempAngleBetweenVec:cross(v1, v2)
+      return angle * (tempAngleBetweenVec:dot(positiveVector) > 0 and 1 or -1)
     else
       return angle
     end
@@ -182,8 +192,8 @@ vec3 = {
     transform:rotate(transform, angle[1], cpml.vec3.unit_x)
     transform:rotate(transform, angle[3], cpml.vec3.unit_z)
     -- Multiply it by a unit vector
-    tempAngleVec:setValues(0, 0, 1)
-    return vec3.applyTransform(out, tempAngleVec, transform)
+    tempAngleToDirVec:setValues(0, 0, 1)
+    return vec3.applyTransform(out, tempAngleToDirVec, transform)
   end,
   applyTransform = function(out, v, transform)
     local vec4 = tempTransformObj
@@ -203,7 +213,7 @@ setmetatable(vec3, {
 
 -- Initialize object pool
 unitX, unitY, unitZ = vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)
-tempAngleVec = vec3()
+tempAngleToDirVec, tempAngleBetweenVec, tempProjectOntoPlaneVec = vec3(), vec3(), vec3()
 tempVec1, tempVec2, tempVec3 = vec3(), vec3(), vec3()
 
 return vec3

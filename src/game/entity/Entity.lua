@@ -140,7 +140,49 @@ local Entity = defineClass({
     out[1], out[2], out[3] = self.rotation.x, self.rotation.y, self.rotation.z
     return out
   end,
-  getRotationRelative = function(self, out)
+  getRotationRelative = function(self, scene, out) -- TODO rmeove scene
+    -- Create a rotation matrix
+    local rotation = cpml.mat4()
+    rotation:identity()
+    rotation:rotate(rotation, self.rotation[2], cpml.vec3.unit_y)
+    rotation:rotate(rotation, self.rotation[1], cpml.vec3.unit_x)
+    rotation:rotate(rotation, self.rotation[3], cpml.vec3.unit_z)
+    -- Create the axis direction
+    local forward = vec3(0, 0, 1)
+    local up = vec3(0, 1, 0)
+    local side = vec3(1, 0, 0)
+    -- Apply the rotation to each of them
+    forward:applyTransform(forward, rotation)
+    up:applyTransform(up, rotation)
+    side:applyTransform(side, rotation)
+    -- Project the side axis onto the XZ plane
+    local normal = vec3()
+    normal:cross(forward, vec3(0, up.y >= 0 and 1 or -1, 0))
+    normal:cross(normal, forward)
+    local sideProj = vec3()
+    sideProj:projectOntoPlane(side, normal)
+    if up.y < 0 then
+      sideProj:multiplyValues(sideProj, -1, -1, -1)
+    end
+    -- print('sideProj', sideProj)
+    -- -- The angle between the side and its XZ projection is the roll
+    local angle = sideProj:angleBetween(side, forward)
+    print('rotation', self.rotation)
+    print('forward', forward)
+    print('vector', vec3():angleToDir(self.rotation))
+    print('self.rotation[3]', self.rotation[3])
+    print('angle', angle)
+    print('pi - angle', math.pi - math.abs(angle))
+    scene:addArrowInDirection(self.position, forward, 4 * forward:length(), textures.blue)
+    scene:addArrowInDirection(self.position, up, 4 * up:length(), textures.green)
+    scene:addArrowInDirection(self.position, side, 4 * side:length(), textures.red)
+    scene:addArrowInDirection(self.position, normal, 4 * normal:length())
+    scene:addArrowInDirection(self.position, sideProj, 4 * sideProj:length(), textures.yellow)
+    -- self.axisX = side
+    -- self.axisZ = normal
+    -- self.axisY = sideProj
+    -- local dir = vec3():angleToDir(self.rotation)
+    -- local handle = vec3():cross(dir, { 0, 1, 0 })
     -- TODO
     -- out = out or vec3()
     -- return out:subtract(self.rotation, self.axisRotation)

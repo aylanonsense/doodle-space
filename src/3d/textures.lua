@@ -11,5 +11,6 @@ return {
   grey = createColoredTexture(0.5, 0.5, 0.5),
   red = createColoredTexture(1, 0, 0),
   blue = createColoredTexture(0, 0, 1),
-  green = createColoredTexture(0, 1, 0)
+  green = createColoredTexture(0, 1, 0),
+  yellow = createColoredTexture(1, 1, 0)
 }
