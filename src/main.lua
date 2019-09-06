@@ -4,7 +4,7 @@ local Model = require('3d/Model')
 local Shape = require('3d/Shape')
 local vec3 = require('3d/vec3')
 local textures = require('3d/textures')
-local Arrow = require('game/entity/Arrow')
+local TestSubject = require('game/entity/TestSubject')
 
 -- Constants
 local CAMERA_SENSITIVITY = 0.5
@@ -13,7 +13,7 @@ local CAMERA_SENSITIVITY = 0.5
 local scene
 local enableMouseLook
 local obj
-local arrow
+local obj
 
 function love.load()
   -- Start with mouse look off
@@ -30,83 +30,28 @@ function love.load()
   -- Move the camera
   scene.camera:translate(3, 3, 7):rotate(0, math.pi, 0):calculateTransform()
 
-  -- Create an object
-  -- local texture = love.graphics.newImage('../img/texture.png')
-  -- obj = scene:addModel(Model:new(Shape.Arrow:new(1), texture.black))
-  -- obj:translate(3, 5, 0):rotate(0, 0, 0):resize(4, 4, 2)
-  -- obj:setUpVector({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-  -- obj:calculateTransform()
-  -- scene:addArrowInDirection(obj.position, obj.unitX, 5, textures.red)
-  -- scene:addArrowInDirection(obj.position, obj.unitY, 5, textures.green)
-  -- scene:addArrowInDirection(obj.position, obj.unitZ, 5, textures.blue)
-
   -- Add vectors to better show the origin and each axis
   scene:addArrowInDirection({ 0, 0, 0 }, { 1, 0, 0 }, 10, textures.red)
   scene:addArrowInDirection({ 0, 0, 0 }, { 0, 1, 0 }, 10, textures.green)
   scene:addArrowInDirection({ 0, 0, 0 }, { 0, 0, 1 }, 10, textures.blue)
 
-  arrow = scene:addEntity(Arrow:new())
-  arrow:translate(3, 5, 0):setScale(0.3, 0.3, 0.3)
-  -- arrow:resize(3, 3, 1)-- :setDirection(1, 0, 1)
-  -- arrow:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-  -- arrow:setAxis({ 0.7, 0.9, -0.3 }, { 0, 1, 0 })
-  -- arrow:setRotationRelative({ 0, 0, 0 })
+  -- Create an object to play around with
+  obj = scene:addEntity(TestSubject:new())
+  obj:translate(3, 5, 0)
 
-  arrow:setRotation((2 * math.random() - 1) * math.pi / 2, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi)
-  -- arrow:setRotation(0.30022197242012, -1.1257415425505, -3.0827775440876) --(2 * math.random() - 1) * math.pi / 2, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi) --(2 * math.random() - 1) * math.pi)
-  -- print('rotation', arrow.rotation)
-  arrow:getRotationRelative(scene)
-  arrow.shouldDrawAxis = false
-
-  -- local relative123 = vec3(2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1)
-  -- print('RELATIVE', relative123)
-  -- local absolute123 = arrow:convertToAbsolute(vec3(), relative123)
-  -- print('ABSOLUTE', absolute123)
-  -- local relativeAgain123 = arrow:convertToRelative(vec3(), absolute123)
-  -- print('RELATIVE AGAIN', relativeAgain123)
-  -- local err = vec3():subtract(relative123, relativeAgain123)
-  -- print('ERROR', err)
-
-  -- arrow:setRotationRelative({ math.pi / 2, 0, 0 })
-  -- arrow:setRotationRelative({ -math.pi / 4, math.pi / 4, 0 })
-
-  -- arrow:setRotation(0, 0, math.pi / 8)
-  -- arrow:rotate(0, math.pi / 2, 0)
-  -- local r = arrow:getRotationRelative()
-  -- print(r)
-  -- arrow:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-  -- arrow:setRotationRelative(r)
-  -- print(arrow:getRotation())
-  -- print(arrow:getRotationRelative())
-  -- print(arrow:getPosition())
-  -- print(arrow:getPositionRelative())
-  -- print(arrow:convertToAbsolute(vec3(), 0, 1, 1))
-
-  -- local v = vec3.clone(obj.unitX)
-  -- print(v)
-  -- v:dirToAngle(v)
-  -- v:angleToDir(v)
-  -- print(v)v = vec3.clone(obj.unitY)
-  -- print(v)
-  -- v:dirToAngle(v)
-  -- v:angleToDir(v)
-  -- print(v)v = vec3.clone(obj.unitZ)
-  -- print(v)
-  -- v:dirToAngle(v)
-  -- v:angleToDir(v)
-  -- print(v)
+  -- Play with the object
+  -- obj:setAxis({ 0.5, -1, 0.9 }, { 1, 0, 0 })
+  obj:setRotationRelative(0, 0, 0) --math.pi / 4, 0)
+  -- print('absolute rotation:', obj:getRotation())
+  -- print('relative rotation:', obj:getRotationRelative())
+  -- obj:setAxis((2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi)
+  -- obj:setRotationRelative(0, 0, 0)
 end
 
 function love.update(dt)
-  -- arrow:rotateRelative({ 0, dt, 0 })
-  -- arrow:translateRelative({ -dt, dt, dt })
-  -- arrow:rotate({ 0, 0, 0 })
-  -- obj:setUpVector({ 0.0, 1, n }):calculateTransform()
-  -- obj:rotate({ dt, 0, 0 }):calculateTransform()
-  -- obj:translateRelative({ 0, 0, dt }):calculateTransform()
-  -- scene:addArrowInDirection(obj.position, obj.unitX, 5)
-  -- scene:addArrowInDirection(obj.position, obj.unitY, 5)
-  -- scene:addArrowInDirection(obj.position, obj.unitZ, 5)
+  -- Update the object
+  obj:rotateRelative(dt, 0, 0)
+
   -- Read keyboard inputs
   local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
   local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
@@ -145,9 +90,6 @@ function love.mousepressed()
     local focus = scene.camera
     local dir = vec3():angleToDir(focus.rotation)
     scene:addArrowInDirection(focus.position, dir, 5)
-    -- scene:addArrowInDirection(obj.position, obj.unitX, 5, textures.red)
-    -- scene:addArrowInDirection(obj.position, obj.unitY, 5, textures.green)
-    -- scene:addArrowInDirection(obj.position, obj.unitZ, 5, textures.blue)
   end
 end
 
