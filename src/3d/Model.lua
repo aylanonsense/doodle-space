@@ -19,10 +19,7 @@ local Model = defineClass({
   position = nil,
   rotation = nil,
   scale = nil,
-  unitX = nil,
-  unitY = nil,
-  unitZ = nil,
-  axisRotation = nil,
+  arbitraryTransform = nil,
   transform = nil,
   transformInverse = nil,
   mesh = nil,
@@ -33,9 +30,6 @@ local Model = defineClass({
     self.position = vec3(0, 0, 0)
     self.rotation = vec3(0, 0, 0)
     self.scale = vec3(1, 1, 1)
-    self.unitX = vec3(1, 0, 0)
-    self.unitY = vec3(0, 1, 0)
-    self.unitZ = vec3(0, 0, 1)
 
     -- Create a new mesh
     self.mesh = love.graphics.newMesh(VERTEX_FORMAT, shape.vertices, POLYGON_FORMAT)
@@ -45,7 +39,6 @@ local Model = defineClass({
     self.mesh:setTexture(texture or textures.black)
 
     -- Calculate the transformation matrix
-    self.axisRotation = vec3():dirToAngle(self.unitZ, self.unitY)
     self.transform = cpml.mat4()
     self.transformInverse = cpml.mat4()
     self:calculateTransform()
@@ -107,6 +100,9 @@ local Model = defineClass({
     end
     return self
   end,
+  setArbitraryTransform = function(self, transform)
+    self.arbitraryTransform = transform
+  end,
   setScale = function(self, x, y, z)
     if y or z then
       self.scale:setValues(x, y, z)
@@ -123,33 +119,22 @@ local Model = defineClass({
     end
     return self
   end,
-  setDirection = function(self, x, y, z) -- TDOO label this as relative, make an absolute
+  setDirection = function(self, x, y, z)
     if y or z then
-      self.rotation:dirToAngle(vec3(x, y, z)) -- Unnecessarily makes an extra object
+      self.rotation:dirToAngle(vec3(x, y, z)) -- TODO remove object instantiation
     else
       self.rotation:dirToAngle(x)
     end
-    return self
-  end,
-  setUpVector = function(self, up, forwardish)
-    forwardish = forwardish or self.unitZ
-    self.unitY:set(up)
-    self.unitY:normalize(self.unitY)
-    self.unitX:cross(self.unitY, forwardish)
-    self.unitX:normalize(self.unitX)
-    self.unitZ:cross(self.unitX, self.unitY)
-    self.unitZ:normalize(self.unitZ)
-    self.axisRotation:dirToAngle(self.unitZ, self.unitY)
     return self
   end,
   calculateTransform = function(self)
     self.transform:identity()
     -- Apply position
     self.transform:translate(self.transform, self.position)
-    -- Apply change of unit vectors
-    self.transform:rotate(self.transform, self.axisRotation[2], cpml.vec3.unit_y)
-    self.transform:rotate(self.transform, self.axisRotation[1], cpml.vec3.unit_x)
-    self.transform:rotate(self.transform, self.axisRotation[3], cpml.vec3.unit_z)
+    -- Apply arbitrary transform
+    if self.arbitraryTransform then
+      self.transform:mul(self.arbitraryTransform, self.transform)
+    end
     -- Apply rotation
     self.transform:rotate(self.transform, self.rotation[2], cpml.vec3.unit_y)
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)

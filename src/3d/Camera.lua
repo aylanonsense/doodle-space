@@ -2,13 +2,11 @@ local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
 local vec3 = require('3d/vec3')
 
--- Object pool
-local tempVec3 = vec3()
-
 local Camera = defineClass({
   position = nil,
   rotation = nil,
   perspective = nil,
+  arbitraryTransform = nil,
   transform = nil,
   fov = 80,
   aspectRatio = 1,
@@ -58,7 +56,7 @@ local Camera = defineClass({
   end,
   setDirection = function(self, x, y, z)
     if y or z then
-      self.rotation:dirToModelAngle(vec3(x, y, z)) -- Unnecessarily makes an extra object
+      self.rotation:dirToModelAngle(vec3(x, y, z)) -- TODO remove object instantiation
     else
       self.rotation:dirToModelAngle(x)
     end
@@ -68,6 +66,9 @@ local Camera = defineClass({
     self.aspectRatio = aspectRatio
     return self
   end,
+  setArbitraryTransform = function(self, transform)
+    self.arbitraryTransform = transform
+  end,
   calculatePerspective = function(self)
     self.perspective = cpml.mat4.from_perspective(self.fov, self.aspectRatio, self.nearClip, self.farClip)
     self.perspective:transpose(self.perspective)
@@ -75,11 +76,14 @@ local Camera = defineClass({
   end,
   calculateTransform = function(self)
     self.transform:identity()
+    if self.arbitraryTransform then
+      self.transform:mul(self.arbitraryTransform, self.transform)
+    end
     self.transform:rotate(self.transform, self.rotation[3], cpml.vec3.unit_z)
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
     self.transform:rotate(self.transform, math.pi - self.rotation[2], cpml.vec3.unit_y)
-    tempVec3:multiplyValues(self.position, -1, -1, -1)
-    self.transform:translate(self.transform, tempVec3)
+    local reversePosition = vec3():multiplyValues(self.position, -1, -1, -1) -- TODO remove object instantiation
+    self.transform:translate(self.transform, reversePosition)
     self.transform:transpose(self.transform)
     self.transform:mul(self.perspective, self.transform)
     return self
