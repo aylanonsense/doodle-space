@@ -37,43 +37,44 @@ function love.load()
 
   -- Create an object to play around with
   obj = scene:addEntity(TestSubject:new())
-  obj:translate(5, 1, 5)
+  obj:translate(3, 1, 5)
 
   -- Play with the object
-  obj:setAxis({ 0.3, 1, 0 }, { 0, 0, 1 })
+  -- obj:setAxis({ 0.7, -1, 0.9 }, { 0, 0, -1 })
+  obj:rotate(0, math.pi / 4, 0)
   -- obj:setRotationRelative(0, 0, 0) --math.pi / 4, 0)
   -- print('absolute rotation:', obj:getRotation())
   -- print('relative rotation:', obj:getRotationRelative())
-  -- obj:setAxis((2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi)
+  obj:setAxis((2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi, (2 * math.random() - 1) * math.pi)
   -- obj:setRotationRelative(0, 0, 0)
 end
 
 function love.update(dt)
   -- Update the object
-  obj:rotate(0, dt, 0)
+  obj:rotate(dt, 0, 10 * dt)
   obj:transformCamera(scene.camera)
 
-  -- -- Read keyboard inputs
-  -- local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
-  -- local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
-  -- local upwardMovement = (love.keyboard.isDown('space') and 1 or 0) - (love.keyboard.isDown('lctrl') and 1 or 0)
-  -- local spin = (love.keyboard.isDown('v') and 1 or 0) - (love.keyboard.isDown('c') and 1 or 0)
+  -- Read keyboard inputs
+  local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
+  local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
+  local upwardMovement = (love.keyboard.isDown('space') and 1 or 0) - (love.keyboard.isDown('lctrl') and 1 or 0)
+  local spin = (love.keyboard.isDown('v') and 1 or 0) - (love.keyboard.isDown('c') and 1 or 0)
 
-  -- -- Move the camera
-  -- local speed = love.keyboard.isDown('lshift') and 15 or 3
-  -- if forwardMovement ~= 0 or leftwardMovement ~= 0 then
-  --   local angle = scene.camera.rotation.y + math.atan2(leftwardMovement, forwardMovement)
-  --   scene.camera:translate(speed * math.sin(angle) * dt, 0, speed * math.cos(angle) * dt)
-  -- end
-  -- if upwardMovement ~= 0 then
-  --   scene.camera:translate(0, upwardMovement * speed * dt, 0)
-  -- end
-  -- if spin ~= 0 then
-  --   scene.camera:rotate(0, 0, 3 * spin * CAMERA_SENSITIVITY / 100)
-  -- end
-  -- if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 or spin ~= 0 then
-  --   scene.camera:calculateTransform()
-  -- end
+  -- Move the camera
+  local speed = love.keyboard.isDown('lshift') and 15 or 3
+  if forwardMovement ~= 0 or leftwardMovement ~= 0 then
+    local angle = scene.camera.rotation.y + math.atan2(leftwardMovement, forwardMovement)
+    scene.camera:translate(speed * math.sin(angle) * dt, 0, speed * math.cos(angle) * dt)
+  end
+  if upwardMovement ~= 0 then
+    scene.camera:translate(0, upwardMovement * speed * dt, 0)
+  end
+  if spin ~= 0 then
+    scene.camera:rotate(0, 0, 3 * spin * CAMERA_SENSITIVITY / 100)
+  end
+  if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 or spin ~= 0 then
+    scene.camera:calculateTransform()
+  end
 end
 
 function love.mousemoved(x, y, dx, dy)

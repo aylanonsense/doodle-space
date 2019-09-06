@@ -132,9 +132,9 @@ vec3 = {
     local len1 = vec3.length(v1)
     local len2 = vec3.length(v2)
     local angle = math.acos(dot / (len1 * len2))
-    -- If the acos is NaN or infiniity, it means there's 0 angle between them
+    -- If the acos is NaN or infiniity, it means there's either 0 or 180 degrees between them
     if angle ~= angle then
-      return 0
+      return (vec3.dot(v1, v2) > 0) and 0 or math.pi
     -- Figure out if the angle should be positive or negative
     elseif positiveVector then
       tempAngleBetweenVec:cross(v1, v2)

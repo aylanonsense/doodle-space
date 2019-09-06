@@ -6,7 +6,6 @@ local Camera = defineClass({
   position = nil,
   rotation = nil,
   perspective = nil,
-  arbitraryTransform = nil,
   transform = nil,
   fov = 80,
   aspectRatio = 1,
@@ -66,9 +65,6 @@ local Camera = defineClass({
     self.aspectRatio = aspectRatio
     return self
   end,
-  setArbitraryTransform = function(self, transform)
-    self.arbitraryTransform = transform
-  end,
   calculatePerspective = function(self)
     self.perspective = cpml.mat4.from_perspective(self.fov, self.aspectRatio, self.nearClip, self.farClip)
     self.perspective:transpose(self.perspective)
@@ -76,9 +72,6 @@ local Camera = defineClass({
   end,
   calculateTransform = function(self)
     self.transform:identity()
-    if self.arbitraryTransform then
-      self.transform:mul(self.arbitraryTransform, self.transform)
-    end
     self.transform:rotate(self.transform, self.rotation[3], cpml.vec3.unit_z)
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
     self.transform:rotate(self.transform, math.pi - self.rotation[2], cpml.vec3.unit_y)

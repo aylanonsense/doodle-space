@@ -12,7 +12,7 @@ local axisArrowY = Model:new(axisArrowShape, textures.green)
 local axisArrowZ = Model:new(axisArrowShape, textures.blue)
 
 local Entity = defineClass({
-  position = nil, -- The entity's absolute position
+  position = nil, -- The entity's world position
   rotation = nil, -- The entity's rotation relative to its axis
   scale = nil,
   velocity = nil,
@@ -39,11 +39,8 @@ local Entity = defineClass({
   end,
   draw = function(self, shader)
     if self.model then
-      self.model:setPosition(self.position)
-      self.model:setArbitraryTransform(self.axisTransform)
-      self.model:setRotation(self.rotation)
-      self.model:setScale(self.scale)
-      self.model:calculateTransform():draw(shader)
+      self:transformModel(self.model)
+      self.model:draw(shader)
     end
   end,
   drawAxis = function(self, shader)
@@ -51,10 +48,15 @@ local Entity = defineClass({
     axisArrowY:setPosition(self.position):setDirection(self.axisY):calculateTransform():draw(shader)
     axisArrowZ:setPosition(self.position):setDirection(self.axisZ):calculateTransform():draw(shader)
   end,
+  transformModel = function(self, model)
+    model:setPosition(self.position)
+    model:setRotation(self:getWorldRotation())
+    model:setScale(self.scale)
+    model:calculateTransform()
+  end,
   transformCamera = function(self, camera)
     camera:setPosition(self.position)
-    camera:setArbitraryTransform(self.axisTransform)
-    camera:setRotation(self.rotation)
+    camera:setRotation(self:getWorldRotation())
     camera:calculateTransform()
   end,
   setAxis = function(self, upX, upY, upZ, forwardX, forwardY, forwardZ)
@@ -123,7 +125,7 @@ local Entity = defineClass({
     return self
   end,
   translate = function(self, x, y, z)
-    return self:translateWorld(self:_convertToAbsolute(vec3(), x, y, z)) -- TODO remove object instantiation
+    return self:translateWorld(self:_convertToWorld(vec3(), x, y, z)) -- TODO remove object instantiation
   end,
   translateWorld = function(self, x, y, z)
     if y or z then
@@ -136,6 +138,72 @@ local Entity = defineClass({
   getRotation = function(self, out)
     out = out or vec3()
     out[1], out[2], out[3] = self.rotation[1], self.rotation[2], self.rotation[3]
+    return out
+  end,
+  getWorldRotation = function(self, out)
+    out = out or vec3()
+    -- Create a rotation matrix from the current rotation
+    local currRotationTransform = cpml.mat4()
+    currRotationTransform:identity()
+    currRotationTransform:rotate(currRotationTransform, self.rotation[2], cpml.vec3.unit_y)
+    currRotationTransform:rotate(currRotationTransform, self.rotation[1], cpml.vec3.unit_x)
+    currRotationTransform:rotate(currRotationTransform, self.rotation[3], cpml.vec3.unit_z)
+    -- Create some unit vectors
+    local xAxis, yAxis, zAxis = vec3(), vec3(), vec3()
+    xAxis:setValues(1, 0, 0)
+    yAxis:setValues(0, 1, 0)
+    zAxis:setValues(0, 0, 1)
+    -- Rotate them all by the current rotation
+    xAxis:applyTransform(xAxis, currRotationTransform)
+    yAxis:applyTransform(yAxis, currRotationTransform)
+    zAxis:applyTransform(zAxis, currRotationTransform)
+    -- Convert them into world vectors
+    self:_convertToWorld(xAxis, xAxis)
+    self:_convertToWorld(yAxis, yAxis)
+    self:_convertToWorld(zAxis, zAxis)
+    -- Turn all that into an angle
+    local worldRotation = vec3():dirToAngle(zAxis, yAxis)
+    -- Create a vector normal to the rotated XZ plane
+    local upOrDown = vec3()
+    upOrDown:setValues(0, yAxis.y >= 0 and 1 or -1, 0)
+    local xzPlaneNormal = vec3()
+    xzPlaneNormal:cross(zAxis, upOrDown)
+    xzPlaneNormal:cross(xzPlaneNormal, zAxis)
+    -- Project the x axis onto the XZ plane
+    local xAxisProjection = vec3()
+    xAxisProjection:projectOntoPlane(xAxis, xzPlaneNormal)
+    if yAxis.y < 0 then
+      xAxisProjection:multiplyValues(xAxisProjection, -1, -1, -1)
+    end
+    -- The angle between the x axis and its XZ projection is the actual roll angle
+    local pitch = worldRotation[1]
+    local yaw = worldRotation[2]
+    local roll = xAxisProjection:angleBetween(xAxis, zAxis)
+    local rot = self:_wrapRotation(vec3(), pitch, yaw, roll) -- TODO remove object instantiation
+    pitch, yaw, roll = rot[1], rot[2], rot[3]
+
+    if pitch < -math.pi / 2 or pitch > math.pi / 2 then
+      -- We've rotated far enough up/down that we're upside-down now
+      if pitch > 0 then
+        pitch = math.pi - pitch
+      else
+        pitch = -math.pi - pitch
+      end
+      yaw = yaw + math.pi
+      roll = roll + math.pi
+    end
+    -- if roll > math.pi / 2 then
+    --   roll = roll - math.pi
+    --   -- pitch = pitch + math.pi
+    --   -- yaw = yaw + math.pi
+    -- elseif roll < -math.pi / 2 then
+    --   roll = roll + math.pi
+    --   -- pitch = pitch + math.pi
+    --   -- yaw = yaw + math.pi
+    -- end
+    -- Set the new rotation
+    -- print('pitch', pitch, 'yaw', yaw, 'roll', roll)  
+    out[1], out[2], out[3] = pitch, yaw, roll
     return out
   end,
   setRotation = function(self, x, y, z)
@@ -176,7 +244,7 @@ local Entity = defineClass({
     return self
   end,
   accelerate = function(self, x, y, z)
-    return self:accelerateWorld(self:_convertToAbsolute(vec3(), x, y, z)) -- TODO remove object instantiation
+    return self:accelerateWorld(self:_convertToWorld(vec3(), x, y, z)) -- TODO remove object instantiation
   end,
   accelerateWorld = function(self, x, y, z)
     if y or z then
@@ -240,8 +308,8 @@ local Entity = defineClass({
     out[1], out[2], out[3] = x, y, z
     return out
   end,
-  -- Turns a vector relative to the entity's axis into an absolute one
-  _convertToAbsolute = function(self, out, x, y, z)
+  -- Turns a vector relative to the entity's axis into a world one
+  _convertToWorld = function(self, out, x, y, z)
     local conversion = vec3() -- TODO remove object instantiation
     if y or z then
       conversion:setValues(x, y, z)
@@ -250,7 +318,7 @@ local Entity = defineClass({
     end
     -- Multiply by the axis transformation
     conversion:applyTransform(conversion, self.axisTransform)
-    -- The result is the now-absolute vector
+    -- The result is the now-world vector
     out[1], out[2], out[3] = conversion[1], conversion[2], conversion[3]
     return out
   end,

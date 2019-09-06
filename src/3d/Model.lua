@@ -19,7 +19,6 @@ local Model = defineClass({
   position = nil,
   rotation = nil,
   scale = nil,
-  arbitraryTransform = nil,
   transform = nil,
   transformInverse = nil,
   mesh = nil,
@@ -100,9 +99,6 @@ local Model = defineClass({
     end
     return self
   end,
-  setArbitraryTransform = function(self, transform)
-    self.arbitraryTransform = transform
-  end,
   setScale = function(self, x, y, z)
     if y or z then
       self.scale:setValues(x, y, z)
@@ -131,10 +127,6 @@ local Model = defineClass({
     self.transform:identity()
     -- Apply position
     self.transform:translate(self.transform, self.position)
-    -- Apply arbitrary transform
-    if self.arbitraryTransform then
-      self.transform:mul(self.arbitraryTransform, self.transform)
-    end
     -- Apply rotation
     self.transform:rotate(self.transform, self.rotation[2], cpml.vec3.unit_y)
     self.transform:rotate(self.transform, self.rotation[1], cpml.vec3.unit_x)
