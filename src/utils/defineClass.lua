@@ -8,10 +8,14 @@ local function defineClass(superclass, class)
     class.superclass = superclass
     setmetatable(class, { __index = superclass })
   end
+  -- Set a metatable on the class
+  if not class.metatable then
+    class.metatable = { __index = class }
+  end
   -- Add a :new method onto the class
   class.new = function(self, ...)
     local instance = {}
-    setmetatable(instance, { __index = self })
+    setmetatable(instance, self.metatable)
     if instance.init then
       instance:init(...)
     end
@@ -19,7 +23,7 @@ local function defineClass(superclass, class)
   end
   -- Add a :newFromObject method onto the class
   class.newFromObject = function(self, instance, ...)
-    setmetatable(instance, { __index = self })
+    setmetatable(instance, self.metatable)
     if instance.init then
       instance:init(...)
     end

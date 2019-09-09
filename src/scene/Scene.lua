@@ -1,12 +1,5 @@
-local cpml = require('libs/cpml')
 local defineClass = require('utils/defineClass')
 local Camera = require('3d/Camera')
-local Shape = require('3d/Shape')
-local Model = require('3d/Model')
-local vec3 = require('3d/vec3')
-local textures = require('3d/textures')
-
-local THREE_DIMENSIONAL_SHADER = love.graphics.newShader('../shaders/three-dimensional.shader')
 
 local Scene = defineClass({
   ambientLightLevel = 0.25,
@@ -18,17 +11,17 @@ local Scene = defineClass({
   shader = nil,
   camera = nil,
   models = nil,
-  entities = nil,
   init = function(self, width, height)
     self.width = width
     self.height = height
     self.canvas = love.graphics.newCanvas(width, height)
-    self.shader = THREE_DIMENSIONAL_SHADER
+    self.shader = love.graphics.newShader('../shaders/three-dimensional.shader')
     self.camera = Camera:new(width / height)
     self.models = {}
-    self.entities = {}
   end,
   draw = function(self)
+    love.graphics.push()
+
     -- Clear the canvas
     love.graphics.setDepthMode('lequal', true)
     love.graphics.setCanvas({ self.canvas, depth = true })
@@ -46,18 +39,14 @@ local Scene = defineClass({
     for _, model in ipairs(self.models) do
       model:draw(self.shader)
     end
-    for _, entity in ipairs(self.entities) do
-      entity:draw(self.shader)
-      if entity.shouldDrawAxis then
-        entity:drawAxis(self.shader)
-      end
-    end
 
     -- Copy the 3D render to the actual canvas
     love.graphics.setShader()
     love.graphics.setCanvas()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(self.canvas, 0, 0, 0, 1, -1, 0, self.height) -- why is it upside down?
+
+    love.graphics.pop()
   end,
   resize = function(self, width, height)
     self.width = width
@@ -67,11 +56,15 @@ local Scene = defineClass({
     self.camera:calculatePerspective()
     self.camera:calculateTransform()
   end,
-  addEntity = function(self, entity)
-    table.insert(self.entities, entity)
-    return entity
+  spawnModel = function(self, ...)
+    return self:addModel(Model:newFromObject({ scene = self }, ...))
   end,
   addModel = function(self, model)
+    for i, model2 in ipairs(self.models) do
+      if model2 == model then
+        return model
+      end
+    end
     table.insert(self.models, model)
     return model
   end,
@@ -82,29 +75,6 @@ local Scene = defineClass({
         break;
       end
     end
-  end,
-  addArrowBetweenPoints = function(self, pt1, pt2, texture)
-    local diff = vec3.subtract(vec3(), pt2, pt1)
-    -- Create an arrow of the correct length
-    local shape = Shape.Arrow:new(diff:length())
-    local model = Model:new(shape, texture or textures.black)
-    -- Position it at the start point and point it towards the end point
-    model:setPosition(pt1)
-    model:setDirection(diff)
-    model:calculateTransform()
-    -- Add the arrow to the scene
-    return self:addModel(model)
-  end,
-  addArrowInDirection = function(self, pos, dir, length, texture)
-    -- Create an arrow of the correct length
-    local shape = Shape.Arrow:new(length or 1)
-    local model = Model:new(shape, texture or textures.black)
-    -- Position it at the start point and point it in the right direction
-    model:setPosition(pos)
-    model:setDirection(dir)
-    model:calculateTransform()
-    -- Add the arrow to the scene
-    return self:addModel(model)
   end
 })
 

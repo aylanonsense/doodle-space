@@ -1,52 +1,63 @@
 local defineClass = require('utils/defineClass')
+local ObjectPool = require('utils/ObjectPool')
+local Vector3 = require('math/Vector3')
 local cpml = require('libs/cpml')
-local vec3 = require('3d/vec3')
-local Model = require('3d/Model')
-local Shape = require('3d/Shape')
-local textures = require('3d/textures')
 
--- Create an arrow that will be reused for all axes
+-- Create some axis arrows that will be reused across all models
 local axisArrowShape = Shape.Arrow:new(3)
 local axisArrowX = Model:new(axisArrowShape, textures.red)
 local axisArrowY = Model:new(axisArrowShape, textures.green)
 local axisArrowZ = Model:new(axisArrowShape, textures.blue)
 
+-- Object pool
+local vector3Pool = ObjectPool:new(Vector3)
+local matrix4Pool = ObjectPool:new(cpml.mat4, true)
+
+-- Helper method
+local function extractVectorValues(x, y, z)
+  if not z then
+    return x.x or x[1], x.y or x[2], x.z or x[3]
+  else
+    return x, y, z
+  end
+end
+
 local Entity = defineClass({
-  position = nil, -- The entity's world position
-  rotation = nil, -- The entity's rotation relative to its axis
+  position = nil,
+  rotation = nil,
   scale = nil,
   velocity = nil,
-  axisX = nil,
-  axisY = nil,
-  axisZ = nil,
+  xAxis = nil,
+  yAxis = nil,
+  zAxis = nil,
   axisRotation = nil,
   axisTransform = nil,
   axisTransformInverse = nil,
   model = nil,
   shouldDrawAxis = true,
   init = function(self, model)
-    self.position = vec3(0, 0, 0)
-    self.rotation = vec3(0, 0, 0)
-    self.scale = vec3(1, 1, 1)
-    self.velocity = vec3(0, 0, 0)
-    self.axisX = vec3(1, 0, 0)
-    self.axisY = vec3(0, 1, 0)
-    self.axisZ = vec3(0, 0, 1)
-    self.axisRotation = vec3(0, 0, 0)
+    self.position = Vector3:new()
+    self.rotation = Vector3:new()
+    self.scale = Vector3:new(1, 1, 1)
+    self.velocity = Vector3:new()
+    self.xAxis = Vector3:new(1, 0, 0)
+    self.yAxis = Vector3:new(0, 1, 0)
+    self.zAxis = Vector3:new(0, 0, 1)
+    self.axisRotation = Vector3:new()
     self.axisTransform = cpml.mat4():identity()
     self.axisTransformInverse = cpml.mat4():identity()
+    self.rotationTransform = cpml.mat4():identity()
     self.model = model
   end,
-  draw = function(self, shader)
+  draw = function(self)
     if self.model then
       self:transformModel(self.model)
-      self.model:draw(shader)
     end
   end,
-  drawAxis = function(self, shader)
-    axisArrowX:setPosition(self.position):setDirection(self.axisX):calculateTransform():draw(shader)
-    axisArrowY:setPosition(self.position):setDirection(self.axisY):calculateTransform():draw(shader)
-    axisArrowZ:setPosition(self.position):setDirection(self.axisZ):calculateTransform():draw(shader)
+  drawAxis = function(self)
+    axisArrowX:setPosition(self.position):setDirection(self.xAxis):calculateTransform():draw()
+    axisArrowY:setPosition(self.position):setDirection(self.yAxis):calculateTransform():draw()
+    axisArrowZ:setPosition(self.position):setDirection(self.zAxis):calculateTransform():draw()
   end,
   transformModel = function(self, model)
     model:setPosition(self.position)
@@ -60,282 +71,190 @@ local Entity = defineClass({
     camera:calculateTransform()
   end,
   setAxis = function(self, upX, upY, upZ, forwardX, forwardY, forwardZ)
-    local axisX, axisY, axisZ = vec3(), vec3(), vec3() -- TODO remove object instantiation
-    -- Expand vector arguments into 6 coordinates
-    if not upZ then
-      -- 2 vectors (up and forward)
-      if upY then
-        forwardX, forwardY, forwardZ = upY[1], upY[2], upY[3]
-        upX, upY, upZ = upX[1], upX[2], upX[3]
-      -- 1 vector (up only)
+    -- 6 arguments: x, y, z, positiveX, positiveY, positiveZ
+    if forwardZ then
+      -- do nothing
+    -- 4 arguments: either x, y, z, Vector3 ~or~ Vector3, x, y, z
+    elseif forwardX then
+      if type(upX) == 'number' then
+        forwardX, forwardY, forwardZ = extractVectorValues(forwardX)
       else
-        upX, upY, upZ = upX[1], upX[2], upX[3]
+        forwardX, forwardY, forwardZ = upY, upZ, forwardX
+        upX, upY, upZ = extractVectorValues(upX)
       end
+    -- 3 arguments: x, y, z
+    elseif upZ then
+      -- do nothing
+    -- 2 arguments: Vector3, Vector3
+    elseif upY and not upZ then
+      forwardX, forwardY, forwardZ = extractVectorValues(upY)
+      upX, upY, upZ = extractVectorValues(upX)
+    -- 1 argument: Vector3
+    elseif upX then
+      upX, upY, upZ = extractVectorValues(upX)
     end
+    -- Some default valuess
     upX, upY, upZ = upX or 0, upY or 0, upZ or 0
     if upX == 0 and upY == 0 and upZ == 0 then
       upY = 1
     end
-    -- Default the forward vector to the current forward vector
-    forwardX, forwardY, forwardZ = forwardX or self.axisZ.x, forwardY or self.axisZ.y, forwardZ or self.axisZ.z
+    forwardX, forwardY, forwardZ = forwardX or self.zAxis.x, forwardY or self.zAxis.y, forwardZ or self.zAxis.z
+    -- Create some unit vectors
+    local xAxis = vector3Pool:withdraw('setAxis-xAxis')
+    local yAxis = vector3Pool:withdraw('setAxis-yAxis')
+    local zAxis = vector3Pool:withdraw('setAxis-zAxis')
     -- Set the up vector
-    axisY:setValues(upX, upY, upZ)
-    axisY:normalize(axisY)
+    yAxis:set(upX, upY, upZ):normalize()
     -- Figure out the side vector by taking the cross product of the up and forward(ish) vectors
-    axisX:crossValues(axisY, forwardX, forwardY, forwardZ)
-    if axisX:isZero() then
-      -- The only way the cross product is zero is if the new Y is equal to the old Z. In which case, the X axis can stay the same
-      axisX:set(self.axisX)
-    else
-      axisX:normalize(axisX)
+    xAxis:set(yAxis):cross(forwardX, forwardY, forwardZ):normalize()
+    -- The only way the cross product is zero is if the new Y is equal to the old Z. In which case, the X axis can stay the same
+    if xAxis:isZero() then
+      xAxis:set(self.xAxis)
     end
     -- Figure out the exact forward vector by taking the cross product of the up and side vectors
-    axisZ:cross(axisX, axisY)
-    axisZ:normalize(axisZ) -- is this necessary?
+    zAxis:set(xAxis):cross(yAxis):normalize() -- is normalizing necessary?
     -- Set the actual axes
-    self.axisX:set(axisX)
-    self.axisY:set(axisY)
-    self.axisZ:set(axisZ)
+    self.xAxis:set(xAxis)
+    self.yAxis:set(yAxis)
+    self.zAxis:set(zAxis)
     -- Create a transformation matrix
-    self.axisRotation:dirToAngle(self.axisZ, self.axisY)
+    self.axisRotation:set(self.zAxis):toRotation(self.yAxis)
     self.axisTransform:identity()
-    self.axisTransform:rotate(self.axisTransform, self.axisRotation[2], cpml.vec3.unit_y)
-    self.axisTransform:rotate(self.axisTransform, self.axisRotation[1], cpml.vec3.unit_x)
-    self.axisTransform:rotate(self.axisTransform, self.axisRotation[3], cpml.vec3.unit_z)
+    self.axisTransform:rotate(self.axisTransform, self.axisRotation.y, cpml.vec3.unit_y)
+    self.axisTransform:rotate(self.axisTransform, self.axisRotation.x, cpml.vec3.unit_x)
+    self.axisTransform:rotate(self.axisTransform, self.axisRotation.z, cpml.vec3.unit_z)
     self.axisTransformInverse:invert(self.axisTransform)
     return self
   end,
-  getPosition = function(self, out)
-    return self:_convertToRelative(out or vec3(), self.position)
-  end,
-  getWorldPosition = function(self, out)
-    out = out or vec3()
-    out[1], out[2], out[3] = self.position.x, self.position.y, self.position.z
-    return out
+  getPosition = function(self)
+    local relativePosition = vector3Pool:withdraw('getPosition-relativePosition')
+    return self:_convertToRelative(relativePosition:set(self.position))
   end,
   setPosition = function(self, x, y, z)
     return self:setWorldPosition(0, 0, 0):translate(x, y, z)
   end,
+  translate = function(self, x, y, z)
+    local relativeTranslation = vector3Pool:withdraw('translate-relativeTranslation')
+    return self:translateWorld(self:_convertToWorld(relativeTranslation:set(x, y, z)))
+  end,
+  getWorldPosition = function(self)
+    return self.position
+  end,
   setWorldPosition = function(self, x, y, z)
-    if y or z then
-      self.position:setValues(x, y, z)
-    else
-      self.position:set(x)
-    end
+    self.position:set(x, y, z)
     return self
   end,
-  translate = function(self, x, y, z)
-    return self:translateWorld(self:_convertToWorld(vec3(), x, y, z)) -- TODO remove object instantiation
-  end,
   translateWorld = function(self, x, y, z)
-    if y or z then
-      self.position:addValues(self.position, x, y, z)
-    else
-      self.position:add(self.position, x)
-    end
+    self.position:add(x, y, z)
     return self
   end,
   getRotation = function(self, out)
-    out = out or vec3()
-    out[1], out[2], out[3] = self.rotation[1], self.rotation[2], self.rotation[3]
-    return out
-  end,
-  getWorldRotation = function(self, out)
-    out = out or vec3()
-    -- Create a rotation matrix from the current rotation
-    local currRotationTransform = cpml.mat4()
-    currRotationTransform:identity()
-    currRotationTransform:rotate(currRotationTransform, self.rotation[2], cpml.vec3.unit_y)
-    currRotationTransform:rotate(currRotationTransform, self.rotation[1], cpml.vec3.unit_x)
-    currRotationTransform:rotate(currRotationTransform, self.rotation[3], cpml.vec3.unit_z)
-    -- Create some unit vectors
-    local xAxis, yAxis, zAxis = vec3(), vec3(), vec3()
-    xAxis:setValues(1, 0, 0)
-    yAxis:setValues(0, 1, 0)
-    zAxis:setValues(0, 0, 1)
-    -- Rotate them all by the current rotation
-    xAxis:applyTransform(xAxis, currRotationTransform)
-    yAxis:applyTransform(yAxis, currRotationTransform)
-    zAxis:applyTransform(zAxis, currRotationTransform)
-    -- Convert them into world vectors
-    self:_convertToWorld(xAxis, xAxis)
-    self:_convertToWorld(yAxis, yAxis)
-    self:_convertToWorld(zAxis, zAxis)
-    -- Turn all that into an angle
-    local worldRotation = vec3():dirToAngle(zAxis, yAxis)
-    -- Create a vector normal to the rotated XZ plane
-    local upOrDown = vec3()
-    upOrDown:setValues(0, yAxis.y >= 0 and 1 or -1, 0)
-    local xzPlaneNormal = vec3()
-    xzPlaneNormal:cross(zAxis, upOrDown)
-    xzPlaneNormal:cross(xzPlaneNormal, zAxis)
-    -- Project the x axis onto the XZ plane
-    local xAxisProjection = vec3()
-    xAxisProjection:projectOntoPlane(xAxis, xzPlaneNormal)
-    if yAxis.y < 0 then
-      xAxisProjection:multiplyValues(xAxisProjection, -1, -1, -1)
-    end
-    -- The angle between the x axis and its XZ projection is the actual roll angle
-    local pitch = worldRotation[1]
-    local yaw = worldRotation[2]
-    local roll = xAxisProjection:angleBetween(xAxis, zAxis)
-    local rot = self:_wrapRotation(vec3(), pitch, yaw, roll) -- TODO remove object instantiation
-    pitch, yaw, roll = rot[1], rot[2], rot[3]
-
-    if pitch < -math.pi / 2 or pitch > math.pi / 2 then
-      -- We've rotated far enough up/down that we're upside-down now
-      if pitch > 0 then
-        pitch = math.pi - pitch
-      else
-        pitch = -math.pi - pitch
-      end
-      yaw = yaw + math.pi
-      roll = roll + math.pi
-    end
-    -- if roll > math.pi / 2 then
-    --   roll = roll - math.pi
-    --   -- pitch = pitch + math.pi
-    --   -- yaw = yaw + math.pi
-    -- elseif roll < -math.pi / 2 then
-    --   roll = roll + math.pi
-    --   -- pitch = pitch + math.pi
-    --   -- yaw = yaw + math.pi
-    -- end
-    -- Set the new rotation
-    -- print('pitch', pitch, 'yaw', yaw, 'roll', roll)  
-    out[1], out[2], out[3] = pitch, yaw, roll
-    return out
+    return self.rotation
   end,
   setRotation = function(self, x, y, z)
-    if y or z then
-      self.rotation:setValues(x, y, z)
-    else
-      self.rotation:set(x)
-    end
-    self:_wrapRotation(self.rotation, self.rotation)
+    self:_wrapRotation(self.rotation:set(x, y, z))
     return self
   end,
   rotate = function(self, x, y, z)
-    if y or z then
-      self.rotation:addValues(self.rotation, x, y, z)
-    else
-      self.rotation:add(self.rotation, x)
-    end
-    self:_wrapRotation(self.rotation, self.rotation)
+    self:_wrapRotation(self.rotation:add(x, y, z))
     return self
   end,
-  getVelocity = function(self, out)
-    return self:_convertToRelative(out or vec3(), self.velocity)
+  getWorldRotation = function(self)
+    -- Create a rotation matrix from the current rotation
+    local rotationTransform = matrix4Pool:withdraw('getWorldRotation-rotationTransform')
+    rotationTransform:identity()
+    rotationTransform:rotate(rotationTransform, self.rotation.y, cpml.vec3.unit_y)
+    rotationTransform:rotate(rotationTransform, self.rotation.x, cpml.vec3.unit_x)
+    rotationTransform:rotate(rotationTransform, self.rotation.z, cpml.vec3.unit_z)
+    -- Create some unit vectors
+    local xAxis = vector3Pool:withdraw('getWorldRotation-xAxis')
+    local yAxis = vector3Pool:withdraw('getWorldRotation-yAxis')
+    local zAxis = vector3Pool:withdraw('getWorldRotation-zAxis')
+    xAxis:set(1, 0, 0)
+    yAxis:set(0, 1, 0)
+    zAxis:set(0, 0, 1)
+    -- Rotate them all by the current rotation
+    xAxis:applyTransform(rotationTransform)
+    yAxis:applyTransform(rotationTransform)
+    zAxis:applyTransform(rotationTransform)
+    -- Convert them into world vectors
+    self:_convertToWorld(xAxis)
+    self:_convertToWorld(yAxis)
+    self:_convertToWorld(zAxis)
+    -- Turn all that into an angle
+    local worldRotation = vector3Pool:withdraw('getWorldRotation-worldRotation')
+    worldRotation:set(zAxis):toRotation(yAxis)
+    -- Create a vector normal to the rotated XZ plane
+    local upOrDown = vector3Pool:withdraw('getWorldRotation-upOrDown')
+    upOrDown:set(0, yAxis.y >= 0 and 1 or -1, 0)
+    local xzPlaneNormal = vector3Pool:withdraw('getWorldRotation-xzPlaneNormal')
+    xzPlaneNormal:set(zAxis):cross(upOrDown):cross(zAxis)
+    -- Project the x axis onto the XZ plane
+    local xAxisProjection = vector3Pool:withdraw('getWorldRotation-xAxisProjection')
+    xAxisProjection:set(xAxis):projectOntoPlane(xzPlaneNormal)
+    if yAxis.y < 0 then
+      xAxisProjection:multiply(-1, -1, -1)
+    end
+    -- The angle between the x axis and its XZ projection is the actual roll angle
+    local worldRotation = vector3Pool:withdraw('getWorldRotation-worldRotation')
+    worldRotation:set(worldRotation.x, worldRotation.y, xAxisProjection:angleBetween(xAxis, zAxis))
+    return self:_wrapRotation(worldRotation)
   end,
-  getWorldVelocity = function(self, out)
-    out = out or vec3()
-    out[1], out[2], out[3] = self.velocity.x, self.velocity.y, self.velocity.z
-    return out
+  getVelocity = function(self)
+    local relativeVelocity = vector3Pool:withdraw('getVelocity-relativeVelocity')
+    return self:_convertToRelative(relativeVelocity:set(self.velocity))
   end,
   setVelocity = function(self, x, y, z)
     return self:setWorldVelocity(0, 0, 0):accelerate(x, y, z)
   end,
-  setWorldVelocity = function(self, x, y, z)
-    if y or z then
-      self.velocity:setValues(x, y, z)
-    else
-      self.velocity:set(x)
-    end
-    return self
-  end,
   accelerate = function(self, x, y, z)
-    return self:accelerateWorld(self:_convertToWorld(vec3(), x, y, z)) -- TODO remove object instantiation
+    local relativeAcceleration = vector3Pool:withdraw('accelerate-relativeAcceleration')
+    return self:accelerateWorld(self:_convertToWorld(relativeAcceleration:set(x, y, z)))
+  end,
+  getWorldVelocity = function(self)
+    return self.velocity
+  end,
+  setWorldVelocity = function(self, x, y, z)
+    self.velocity:set(x, y, z)
+    return self
   end,
   accelerateWorld = function(self, x, y, z)
-    if y or z then
-      self.velocity:addValues(self.velocity, x, y, z)
-    else
-      self.velocity:add(self.velocity, x)
-    end
+    self.velocity:add(x, y, z)
     return self
   end,
-  getScale = function(self, out)
-    out = out or vec3()
-    out[1], out[2], out[3] = self.scale.x, self.scale.y, self.scale.z
-    return out
+  getScale = function(self)
+    return self.scale
   end,
   setScale = function(self, x, y, z)
-    if y or z then
-      self.scale:setValues(x, y, z)
-    else
-      self.scale:set(x)
-    end
+    self.scale:set(x, y, z)
     return self
   end,
   rescale = function(self, x, y, z)
-    if y or z then
-      self.scale:multiplyValues(self.scale, x, y, z)
-    else
-      self.scale:multiply(self.scale, x)
-    end
+    self.scale:multiply(x, y, z)
     return self
   end,
-  _wrapRotation = function(self, out, x, y, z)
-    if not y and not z then
-      x, y, z = x[1], x[2], x[3]
+  _wrapRotation = function(self, rotation)
+    rotation.x = rotation.x % (2 * math.pi)
+    if rotation.x > math.pi then
+      rotation.x = rotation.x - 2 * math.pi
     end
-    -- Rotation in the x-axis (looking up/down, a.k.a. pitch) stays between -math.pi and math.pi
-    x = x % (2 * math.pi)
-    if x > math.pi then
-      x = x - 2 * math.pi
+    rotation.y = rotation.y % (2 * math.pi)
+    if rotation.y > math.pi then
+      rotation.y = rotation.y - 2 * math.pi
     end
-    -- if x < -math.pi / 2 or x > math.pi / 2 then
-    --   -- We've rotated far enough up/down that we're upside-down now
-    --   if x > 0 then
-    --     x = math.pi - x
-    --   else
-    --     x = -math.pi - x
-    --   end
-    --   y = y + math.pi
-    --   z = z + math.pi
-    -- end
-    -- Rotation in the y-axis (looking left/right, a.k.a. yaw) stays between -math.pi and math.pi
-    y = y % (2 * math.pi)
-    if y > math.pi then
-      y = y - 2 * math.pi
+    rotation.z = rotation.z % (2 * math.pi)
+    if rotation.z > math.pi then
+      rotation.z = rotation.z - 2 * math.pi
     end
-    -- Rotation in the z-axis (a.k.a. roll) stays between -math.pi and math.pi
-    z = z % (2 * math.pi)
-    if z > math.pi then
-      z = z - 2 * math.pi
-    end
-    -- Return the wrapped rotation
-    out[1], out[2], out[3] = x, y, z
-    return out
+    return rotation
   end,
   -- Turns a vector relative to the entity's axis into a world one
-  _convertToWorld = function(self, out, x, y, z)
-    local conversion = vec3() -- TODO remove object instantiation
-    if y or z then
-      conversion:setValues(x, y, z)
-    else
-      conversion:set(x)
-    end
-    -- Multiply by the axis transformation
-    conversion:applyTransform(conversion, self.axisTransform)
-    -- The result is the now-world vector
-    out[1], out[2], out[3] = conversion[1], conversion[2], conversion[3]
-    return out
+  _convertToWorld = function(self, vec)
+    return vec:applyTransform(self.axisTransform)
   end,
   -- Turns a vector into one that's relative to the entity's axis
-  _convertToRelative = function(self, out, x, y, z)
-    local conversion = vec3() -- TODO remove object instantiation
-    -- Create a vec4 from the input
-    if y or z then
-      conversion:setValues(x, y, z)
-    else
-      conversion:set(x)
-    end
-    -- Multiply by the inverse axis transformation
-    conversion:applyTransform(conversion, self.axisTransformInverse)
-    -- The result is the now-relative vector
-    out[1], out[2], out[3] = conversion[1], conversion[2], conversion[3]
-    return out
+  _convertToRelative = function(self, vec)
+    return vec:applyTransform(self.axisTransformInverse)
   end
 })
 
