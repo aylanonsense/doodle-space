@@ -1,6 +1,6 @@
 local defineClass = require('utils/defineClass')
 local SceneObject = require('scene/SceneObject')
-local ObjectPool = require('scene/ObjectPool')
+local ObjectPool = require('utils/ObjectPool')
 local Vector3 = require('math/Vector3')
 local cpml = require('libs/cpml')
 

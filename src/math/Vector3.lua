@@ -10,10 +10,10 @@ local transformMatrix
 
 -- Helper method
 local function extractVectorValues(x, y, z)
-  if not z then
-    return x.x or x[1], x.y or x[2], x.z or x[3]
+  if x and not z then
+    return x.x or x[1] or 0, x.y or x[2] or 0, x.z or x[3] or 0
   else
-    return x, y, z
+    return x or 0, y or 0, z or 0
   end
 end
 
@@ -47,7 +47,7 @@ Vector3 = defineClass({
   },
   init = function(self, x, y, z)
     x, y, z = extractVectorValues(x, y, z)
-    self.x, self.y, self.z = x, y, z
+    self.x, self.y, self.z = x or 0, y or 0, z or 0
   end,
   clone = function(self)
     return Vector3:new(self.x, self.y, self.z)
@@ -187,7 +187,7 @@ Vector3 = defineClass({
   applyTransform = function(self, transform)
     local obj = objectPool:withdraw('applyTransform')
     obj[1], obj[2], obj[3], obj[4] = self.x, self.y, self.z, 1
-    cpml.mat4.mul_obj(obj, transform, obj)
+    cpml.mat4.mul_vec4(obj, transform, obj)
     self.x, self.y, self.z = obj[1], obj[2], obj[3]
     return self
   end,

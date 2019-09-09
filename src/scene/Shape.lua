@@ -1,5 +1,5 @@
 local defineClass = require('utils/defineClass')
-local ObjectPool = require('util/ObjectPool')
+local ObjectPool = require('utils/ObjectPool')
 local Vector3 = require('math/Vector3')
 
 -- Object pool

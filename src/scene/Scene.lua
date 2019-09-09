@@ -1,5 +1,6 @@
 local defineClass = require('utils/defineClass')
-local Camera = require('3d/Camera')
+local Model = require('scene/Model')
+local Camera = require('scene/Camera')
 
 local Scene = defineClass({
   ambientLightLevel = 0.25,

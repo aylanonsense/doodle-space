@@ -1,5 +1,8 @@
 local defineClass = require('utils/defineClass')
 local ObjectPool = require('utils/ObjectPool')
+local Model = require('scene/Model')
+local Shape = require('scene/Shape')
+local textures = require('scene/textures')
 local Vector3 = require('math/Vector3')
 local cpml = require('libs/cpml')
 
@@ -15,10 +18,10 @@ local matrix4Pool = ObjectPool:new(cpml.mat4, true)
 
 -- Helper method
 local function extractVectorValues(x, y, z)
-  if not z then
-    return x.x or x[1], x.y or x[2], x.z or x[3]
+  if x and not z then
+    return x.x or x[1] or 0, x.y or x[2] or 0, x.z or x[3] or 0
   else
-    return x, y, z
+    return x or 0, y or 0, z or 0
   end
 end
 
@@ -49,24 +52,25 @@ local Entity = defineClass({
     self.rotationTransform = cpml.mat4():identity()
     self.model = model
   end,
+  update = function(self, dt) end,
   draw = function(self)
     if self.model then
       self:transformModel(self.model)
     end
   end,
   drawAxis = function(self)
-    axisArrowX:setPosition(self.position):setDirection(self.xAxis):calculateTransform():draw()
-    axisArrowY:setPosition(self.position):setDirection(self.yAxis):calculateTransform():draw()
-    axisArrowZ:setPosition(self.position):setDirection(self.zAxis):calculateTransform():draw()
+    axisArrowX:setPosition(self:getWorldPosition()):setDirection(self.xAxis):calculateTransform():draw()
+    axisArrowY:setPosition(self:getWorldPosition()):setDirection(self.yAxis):calculateTransform():draw()
+    axisArrowZ:setPosition(self:getWorldPosition()):setDirection(self.zAxis):calculateTransform():draw()
   end,
   transformModel = function(self, model)
-    model:setPosition(self.position)
+    model:setPosition(self:getWorldPosition())
     model:setRotation(self:getWorldRotation())
-    model:setScale(self.scale)
+    model:setScale(self:getScale())
     model:calculateTransform()
   end,
   transformCamera = function(self, camera)
-    camera:setPosition(self.position)
+    camera:setPosition(self:getWorldPosition())
     camera:setRotation(self:getWorldRotation())
     camera:calculateTransform()
   end,
