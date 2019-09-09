@@ -177,20 +177,26 @@ local Entity = defineClass({
     -- Turn all that into an angle
     local worldRotation = vector3Pool:withdraw('getWorldRotation-worldRotation')
     worldRotation:set(zAxis):toRotation(yAxis)
-    -- Create a vector normal to the rotated XZ plane
-    local upOrDown = vector3Pool:withdraw('getWorldRotation-upOrDown')
-    upOrDown:set(0, yAxis.y >= 0 and 1 or -1, 0)
-    local xzPlaneNormal = vector3Pool:withdraw('getWorldRotation-xzPlaneNormal')
-    xzPlaneNormal:set(zAxis):cross(upOrDown):cross(zAxis)
-    -- Project the x axis onto the XZ plane
-    local xAxisProjection = vector3Pool:withdraw('getWorldRotation-xAxisProjection')
-    xAxisProjection:set(xAxis):projectOntoPlane(xzPlaneNormal)
-    if yAxis.y < 0 then
-      xAxisProjection:multiply(-1, -1, -1)
+    if yAxis.y < -0.0001 or 0.0001 < yAxis.y then
+      -- Create a vector normal to the rotated XZ plane
+      local upOrDown = vector3Pool:withdraw('getWorldRotation-upOrDown')
+      upOrDown:set(0, yAxis.y >= 0 and 1 or -1, 0)
+      local xzPlaneNormal = vector3Pool:withdraw('getWorldRotation-xzPlaneNormal')
+      xzPlaneNormal:set(zAxis):cross(upOrDown):cross(zAxis)
+      -- Project the x axis onto the XZ plane
+      local xAxisProjection = vector3Pool:withdraw('getWorldRotation-xAxisProjection')
+      xAxisProjection:set(xAxis):projectOntoPlane(xzPlaneNormal)
+      if yAxis.y < 0 then
+        xAxisProjection:multiply(-1, -1, -1)
+      end
+      -- The angle between the x axis and its XZ projection is the actual roll angle
+      worldRotation.z = xAxisProjection:angleTo(xAxis, zAxis)
     end
-    -- The angle between the x axis and its XZ projection is the actual roll angle
-    worldRotation.z = xAxisProjection:angleTo(xAxis, zAxis)
     return self:_wrapRotation(worldRotation)
+  end,
+  getWorldDirection = function(self)
+    local worldRotation = self:getWorldRotation()
+    return worldRotation:toDirection()
   end,
   getVelocity = function(self)
     local relativeVelocity = vector3Pool:withdraw('getVelocity-relativeVelocity')

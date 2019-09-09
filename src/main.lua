@@ -39,15 +39,15 @@ function love.load()
   -- Spawn an entity to play with
   entity = game:spawnEntity(TestSubject)
   game:spawnEntity(AxisArrows, entity)
-  entity:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-  entity:rotate(0, math.pi / 2, 0)
+  entity:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
+  entity:rotate(-0.8, 0, 0)
 end
 
 function love.update(dt)
   controllers:update(dt)
 
   -- Play with the entity
-  entity:rotate(10 * dt, dt, 0)
+  entity:rotate(0, dt, 0)
 
   -- Update the game
   game:update(dt)
