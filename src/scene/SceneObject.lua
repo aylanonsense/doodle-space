@@ -69,7 +69,7 @@ local SceneObject = defineClass({
     return self
   end,
   getDirection = function(self)
-    return self._direction:set(self.rotation):toDirection()
+    return self._direction:set(self.rotation):toDirection() -- TODO use an object pool
   end,
   setDirection = function(self, x, y, z)
     self.rotation:set(x, y, z):toRotation()

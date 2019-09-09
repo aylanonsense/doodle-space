@@ -61,7 +61,7 @@ Vector3 = defineClass({
   end,
   set = function(self, x, y, z)
     x, y, z = extractVectorValues(x, y, z)
-    self.x, self.y, self.z = 0, 0, 0
+    self.x, self.y, self.z = x, y, z
     return self
   end,
   add = function(self, x, y, z)
@@ -175,7 +175,7 @@ Vector3 = defineClass({
       return (dot > 0) and 0 or math.pi
     -- Figure out if the angle should be positive or negative
     elseif positiveZ then
-      local normal = vector3Pool:widthdraw('angleBetween-normal')
+      local normal = vector3Pool:withdraw('angleBetween-normal')
       normal:set(self):cross(vec)
       return angle * ((normal:dot(positiveX, positiveY, positiveZ) > 0) and 1 or -1)
     -- We don't have any frame of reference to tell which way is positive so just return the raw angle

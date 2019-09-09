@@ -8,13 +8,6 @@ local Game = defineClass({
   init = function(self, width, height)
     self.scene = Scene:new(width, height)
     self.entities = {}
-    -- Create some entities
-    self:spawnEntity(TestSubject):setWorldPosition(-10, 0, 0)
-    self:spawnEntity(TestSubject):setWorldPosition(10, 0, 0)
-    self:spawnEntity(TestSubject):setWorldPosition(0, 0, -10)
-    self:spawnEntity(TestSubject):setWorldPosition(0, 0, 10)
-    self:spawnEntity(TestSubject):setWorldPosition(0, -10, 0)
-    self:spawnEntity(TestSubject):setWorldPosition(0, 10, 0)
   end,
   update = function(self, dt)
     for _, entity in ipairs(self.entities) do

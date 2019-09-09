@@ -1,6 +1,9 @@
 local defineClass = require('utils/defineClass')
 local Model = require('scene/Model')
+local Shape = require('scene/Shape')
 local Camera = require('scene/Camera')
+local textures = require('scene/textures')
+local Vector3 = require('math/Vector3')
 
 local Scene = defineClass({
   ambientLightLevel = 0.25,
@@ -76,6 +79,29 @@ local Scene = defineClass({
         break;
       end
     end
+  end,
+  spawnArrowBetweenPoints = function(self, pt1, pt2, texture)
+    local diff = Vector3:new():set(pt2):subtract(pt1) -- TODO object instantiation
+    -- Create an arrow of the correct length
+    local shape = Shape.Arrow:new(diff:length())
+    local model = self:spawnModel(shape, texture or textures.black)
+    -- Position it at the start point and point it towards the end point
+    model:setPosition(pt1)
+    model:setDirection(diff)
+    model:calculateTransform()
+    -- Add the arrow to the scene
+    return self:addModel(model)
+  end,
+  spawnArrowInDirection = function(self, pos, dir, length, texture)
+    -- Create an arrow of the correct length
+    local shape = Shape.Arrow:new(length or 1)
+    local model = self:spawnModel(shape, texture or textures.black)
+    -- Position it at the start point and point it in the right direction
+    model:setPosition(pos)
+    model:setDirection(dir)
+    model:calculateTransform()
+    -- Add the arrow to the scene
+    return self:addModel(model)
   end
 })
 
