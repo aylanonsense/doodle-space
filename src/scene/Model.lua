@@ -14,6 +14,7 @@ local Model = defineClass(SceneObject, {
   mesh = nil,
   isWireframe = false,
   cullBackFacingPolygons = true,
+  isVisible = true,
   init = function(self, shape, texture)
     texture = texture or textures.black
 

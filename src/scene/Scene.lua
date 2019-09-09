@@ -41,7 +41,9 @@ local Scene = defineClass({
 
     -- Render each model
     for _, model in ipairs(self.models) do
-      model:draw(self.shader)
+      if model.isVisible then
+        model:draw()
+      end
     end
 
     -- Copy the 3D render to the actual canvas

@@ -142,7 +142,7 @@ Vector3 = defineClass({
     self:subtract(proj)
     return self
   end,
-  angleBetween = function(self, x, y, z, positiveX, positiveY, positiveZ)
+  angleTo = function(self, x, y, z, positiveX, positiveY, positiveZ)
     -- 6 arguments: x, y, z, positiveX, positiveY, positiveZ
     if positiveZ then
       -- do nothing
@@ -166,7 +166,7 @@ Vector3 = defineClass({
       x, y, z = extractVectorValues(x)
     end
     -- Okay, let's actually get the angle now
-    local vec = vector3Pool:withdraw('angleBetween-vec')
+    local vec = vector3Pool:withdraw('angleTo-vec')
     vec:set(x, y, z)
     local dot = self:dot(vec)
     local angle = math.acos(dot / (self:length() * vec:length()))
@@ -175,7 +175,7 @@ Vector3 = defineClass({
       return (dot > 0) and 0 or math.pi
     -- Figure out if the angle should be positive or negative
     elseif positiveZ then
-      local normal = vector3Pool:withdraw('angleBetween-normal')
+      local normal = vector3Pool:withdraw('angleTo-normal')
       normal:set(self):cross(vec)
       return angle * ((normal:dot(positiveX, positiveY, positiveZ) > 0) and 1 or -1)
     -- We don't have any frame of reference to tell which way is positive so just return the raw angle
@@ -208,16 +208,16 @@ Vector3 = defineClass({
         rotX, rotY, rotZ = (self.y < 0 and 1 or -1) * math.pi / 2, 0, 0
       else
         -- The angle between the projection and the actual vector is the amount you need to turn up/down
-        rotX = projXZ:angleBetween(self) * (self:dot(Vector3.unitY) < 0 and 1 or -1)
+        rotX = projXZ:angleTo(self) * (self:dot(Vector3.unitY) < 0 and 1 or -1)
         -- The angle between the projection and the unit z vector is the amount you need to turn left/right
-        rotY = projXZ:angleBetween(Vector3.unitZ, Vector3.unitY)
+        rotY = Vector3.unitZ:angleTo(projXZ, Vector3.unitY)
         if upX and upY and upZ then
           -- The angle between the projected unit Y vector and the up vector is the amount you need to roll clockwise/counter-clockwise
           local projUnitY = vector3Pool:withdraw('toRotation-projUnitY')
           projUnitY:set(Vector3.unitY):projectOntoPlane(self)
           local exactUp = vector3Pool:withdraw('toRotation-exactUp')
           exactUp:set(upX, upY, upZ):projectOntoPlane(self)
-          rotZ = exactUp:angleBetween(projUnitY, self) 
+          rotZ = projUnitY:angleTo(exactUp, self)
         else
           -- Without an up vector, it's impossible to tell how much to roll
           rotZ = 0

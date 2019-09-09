@@ -6,12 +6,6 @@ local textures = require('scene/textures')
 local Vector3 = require('math/Vector3')
 local cpml = require('libs/cpml')
 
--- Create some axis arrows that will be reused across all models
-local axisArrowShape = Shape.Arrow:new(3)
-local axisArrowX = Model:new(axisArrowShape, textures.red)
-local axisArrowY = Model:new(axisArrowShape, textures.green)
-local axisArrowZ = Model:new(axisArrowShape, textures.blue)
-
 -- Object pool
 local vector3Pool = ObjectPool:new(Vector3)
 local matrix4Pool = ObjectPool:new(cpml.mat4, true)
@@ -57,11 +51,6 @@ local Entity = defineClass({
     if self.model then
       self:transformModel(self.model)
     end
-  end,
-  drawAxis = function(self)
-    axisArrowX:setPosition(self:getWorldPosition()):setDirection(self.xAxis):calculateTransform():draw()
-    axisArrowY:setPosition(self:getWorldPosition()):setDirection(self.yAxis):calculateTransform():draw()
-    axisArrowZ:setPosition(self:getWorldPosition()):setDirection(self.zAxis):calculateTransform():draw()
   end,
   transformModel = function(self, model)
     model:setPosition(self:getWorldPosition())
@@ -200,8 +189,7 @@ local Entity = defineClass({
       xAxisProjection:multiply(-1, -1, -1)
     end
     -- The angle between the x axis and its XZ projection is the actual roll angle
-    local worldRotation = vector3Pool:withdraw('getWorldRotation-worldRotation')
-    worldRotation:set(worldRotation.x, worldRotation.y, xAxisProjection:angleBetween(xAxis, zAxis))
+    worldRotation.z = xAxisProjection:angleTo(xAxis, zAxis)
     return self:_wrapRotation(worldRotation)
   end,
   getVelocity = function(self)

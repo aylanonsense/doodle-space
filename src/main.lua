@@ -2,7 +2,11 @@ local Game = require('game/Game')
 local controllers = require('input/controllers')
 local textures = require('scene/textures')
 local TestSubject = require('game/entity/TestSubject')
+local AxisArrows = require('game/entity/AxisArrows')
 local cpml = require('libs/cpml')
+
+
+local Vector3 = require('math/Vector3')
 
 -- Constants
 local CAMERA_SENSITIVITY = 0.5
@@ -25,7 +29,7 @@ function love.load()
   game = Game:new(width, height)
 
   -- Move the camera
-  game.scene.camera:translate(10, 10, 10):rotate(0.1 * math.pi, -0.75 * math.pi, 0):calculateTransform()
+  game.scene.camera:translate(3, 2, 3):rotate(0.1 * math.pi, -0.75 * math.pi, 0):calculateTransform()
 
   -- Add vectors to better show the origin and each axis
   game.scene:spawnArrowBetweenPoints({ 0, 0, 0 }, { 10, 0, 0 }, textures.red)
@@ -34,15 +38,16 @@ function love.load()
 
   -- Spawn an entity to play with
   entity = game:spawnEntity(TestSubject)
-  entity:setPosition(3, 0, 3)
+  game:spawnEntity(AxisArrows, entity)
+  entity:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
+  entity:rotate(0, math.pi / 2, 0)
 end
 
 function love.update(dt)
   controllers:update(dt)
 
   -- Play with the entity
-  -- entity:translate(dt, 0, 0)
-  entity:rotate(0, dt, 0)
+  entity:rotate(10 * dt, dt, 0)
 
   -- Update the game
   game:update(dt)
