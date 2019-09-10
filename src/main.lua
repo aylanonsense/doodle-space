@@ -1,105 +1,66 @@
 local Game = require('game/Game')
 local controllers = require('input/controllers')
-local textures = require('scene/textures')
-local TestSubject = require('game/entity/TestSubject')
-local AxisArrows = require('game/entity/AxisArrows')
-local cpml = require('libs/cpml')
-
-
-local Vector3 = require('math/Vector3')
-
--- Constants
-local CAMERA_SENSITIVITY = 0.5
 
 -- Game variables
 local game
-local enableMouseLook
-local entity
 
 function love.load()
   -- Set some graphics values
   love.graphics.setDefaultFilter('nearest', 'nearest')
   love.graphics.setBackgroundColor(0.92, 0.57, 0.69)
 
-  -- Start with mouse look off
-  enableMouseLook = false
+  -- Create a controller
+  local controller = controllers:newController()
+  controller:map({ controllers.keyboard, controllers.mouse }, {
+    buttons = {
+      toggleEditMode = { 'tab' },
+      createDebugArrow = { 'mouse-btn-1' }
+    },
+    joysticks = {
+      look = 'mouse-move'
+    }
+  })
 
   -- Create the game
   local width, height = love.graphics.getWidth(), love.graphics.getHeight()
-  game = Game:new(width, height)
-
-  -- Move the camera
-  game.scene.camera:translate(3, 2, 3):rotate(0.1 * math.pi, -0.75 * math.pi, 0):calculateTransform()
-
-  -- Add vectors to better show the origin and each axis
-  game.scene:spawnArrowBetweenPoints({ 0, 0, 0 }, { 10, 0, 0 }, textures.red)
-  game.scene:spawnArrowBetweenPoints({ 0, 0, 0 }, { 0, 10, 0 }, textures.green)
-  game.scene:spawnArrowBetweenPoints({ 0, 0, 0 }, { 0, 0, 10 }, textures.blue)
-
-  -- Spawn an entity to play with
-  entity = game:spawnEntity(TestSubject)
-  game:spawnEntity(AxisArrows, entity)
-  entity:setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-  entity:rotate(-0.8, 0, 0)
+  game = Game:new(controller, width, height)
 end
 
 function love.update(dt)
   controllers:update(dt)
 
-  -- Play with the entity
-  entity:rotate(0, dt, 0)
-
   -- Update the game
   game:update(dt)
 
-  -- Read keyboard inputs
-  local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
-  local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
-  local upwardMovement = (love.keyboard.isDown('space') and 1 or 0) - (love.keyboard.isDown('lctrl') and 1 or 0)
-  local spin = (love.keyboard.isDown('v') and 1 or 0) - (love.keyboard.isDown('c') and 1 or 0)
+  -- -- Read keyboard inputs
+  -- local forwardMovement = (love.keyboard.isDown('w') and 1 or 0) - (love.keyboard.isDown('s') and 1 or 0)
+  -- local leftwardMovement = (love.keyboard.isDown('a') and 1 or 0) - (love.keyboard.isDown('d') and 1 or 0)
+  -- local upwardMovement = (love.keyboard.isDown('space') and 1 or 0) - (love.keyboard.isDown('lctrl') and 1 or 0)
+  -- local spin = (love.keyboard.isDown('v') and 1 or 0) - (love.keyboard.isDown('c') and 1 or 0)
 
-  -- Move the camera
-  local speed = love.keyboard.isDown('lshift') and 15 or 3
-  if forwardMovement ~= 0 or leftwardMovement ~= 0 then
-    local angle = game.scene.camera.rotation.y + math.atan2(leftwardMovement, forwardMovement)
-    game.scene.camera:translate(speed * math.sin(angle) * dt, 0, speed * math.cos(angle) * dt)
-  end
-  if upwardMovement ~= 0 then
-    game.scene.camera:translate(0, upwardMovement * speed * dt, 0)
-  end
-  if spin ~= 0 then
-    game.scene.camera:rotate(0, 0, 3 * spin * CAMERA_SENSITIVITY / 100)
-  end
-  if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 or spin ~= 0 then
-    game.scene.camera:calculateTransform()
-  end
+  -- -- Move the camera
+  -- local speed = love.keyboard.isDown('lshift') and 15 or 3
+  -- if forwardMovement ~= 0 or leftwardMovement ~= 0 then
+  --   local angle = game.scene.camera.rotation.y + math.atan2(leftwardMovement, forwardMovement)
+  --   game.scene.camera:translate(speed * math.sin(angle) * dt, 0, speed * math.cos(angle) * dt)
+  -- end
+  -- if upwardMovement ~= 0 then
+  --   game.scene.camera:translate(0, upwardMovement * speed * dt, 0)
+  -- end
+  -- if spin ~= 0 then
+  --   game.scene.camera:rotate(0, 0, 3 * spin * CAMERA_SENSITIVITY / 100)
+  -- end
+  -- if forwardMovement ~= 0 or leftwardMovement ~= 0 or upwardMovement ~= 0 or spin ~= 0 then
+  --   game.scene.camera:calculateTransform()
+  -- end
+
+  controllers:postUpdate(dt)
 end
 
 function love.draw()
   game:draw()
 end
 
-function love.mousemoved(x, y, dx, dy)
-  -- Rotate the camera
-  if enableMouseLook then
-    game.scene.camera:rotate(0, -dx * CAMERA_SENSITIVITY / 100, 0)
-    game.scene.camera.rotation.x = math.min(math.max(-math.pi / 2, game.scene.camera.rotation.x + dy * CAMERA_SENSITIVITY / 100), math.pi / 2)
-    game.scene.camera:calculateTransform()
-  end
-end
-
-function love.mousepressed()
-  -- Add an arrow to the scene whenever the mouse is clicked
-  if enableMouseLook then
-    local focus = game.scene.camera
-    game.scene:spawnArrowInDirection(focus:getWorldPosition(), focus:getDirection(), 5) -- TODO getWorldDirection
-  end
-end
-
-function love.keypressed(btn)
-  -- Toggle whether the camera is controlled by the mouse
-  if btn == 'tab' then
-    enableMouseLook = not enableMouseLook
-    love.mouse.setRelativeMode(enableMouseLook)
-  end
+function love.resize(width, height)
+  game:resize(width, height)
 end

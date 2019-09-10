@@ -2,12 +2,15 @@ local defineClass = require('utils/defineClass')
 
 local Controller = defineClass({
   _buttons = nil,
+  _joysticks = nil,
   _connections = nil,
   init = function(self)
     self._buttons = {}
+    self._joysticks = {}
     self._connections = {}
   end,
-  update = function(self, dt)
+  update = function(self, dt) end,
+  postUpdate = function(self, dt)
     -- Increment all button states
     for _, buttonState in pairs(self._buttons) do
       if buttonState.press then
@@ -15,6 +18,12 @@ local Controller = defineClass({
       end
       if buttonState.release then
         buttonState.release = buttonState.release + 1
+      end
+    end
+    -- Increment all joystick states
+    for _, joystickState in pairs(self._joysticks) do
+      if joystickState.move then
+        joystickState.move = joystickState.move + 1
       end
     end
   end,
@@ -98,6 +107,61 @@ local Controller = defineClass({
       self._buttons[button].release = nil
     end
   end,
+  recordJoystick = function(self, joystick, x, y, countsAsMove)
+    countsAsMove = countsAsMove ~= false
+    if not self._joysticks[joystick] then
+      self._joysticks[joystick] = { move = 0 }
+    end
+    local joystickState = self._joysticks[joystick]
+    if joystickState.x ~= x or joystickState.y ~= y then
+      joystickState.x = x
+      joystickState.y = y
+      if countsAsMove then
+        joystickState.move = 0
+      end
+      self:_pipeJoystick(joystick, x, y, countsAsMove)
+    end
+  end,
+  getJoystick = function(self, joystick)
+    if self._joysticks[joystick] then
+      return self._joysticks[joystick].x or 0, self._joysticks[joystick].y or 0
+    else
+      return 0, 0
+    end
+  end,
+  justMovedJoystick = function(self, joystick, buffer, consume)
+    local joystickState = self._joysticks[joystick]
+    if joystickState and joystickState.move and joystickState.move <= (buffer or 0) then
+      -- Consume the joystick move in the process
+      if consume then
+        joystickState.move = nil
+      end
+      return true
+    else
+      return false
+    end
+  end,
+  map = function(self, controllers, mapping)
+    --[[
+      Example mapping:
+
+        {
+          buttons = {
+            jump = { 'space' }
+            shoot = { 'z', 'x' }
+            accept = { 'z' }
+            cancel = { 'x' }
+          }
+          joysticks = {
+            aim = 'leftjoystick'
+          }
+        }
+    ]]
+    -- TODO allow for joytick -> button and button -> joystick mappings
+    for _, controller in ipairs(controllers) do
+      controller:pipe(self, mapping)
+    end
+  end,
   pipe = function(self, controller, mapping)
     table.insert(self._connections, { controller = controller, mapping = mapping })
   end,
@@ -110,31 +174,47 @@ local Controller = defineClass({
   end,
   _pipePress = function(self, button)
     for _, connection in ipairs(self._connections) do
-      local controller = connection.controller
-      local mapping = connection.mapping
-      local mappedButton
-      if mapping then
-        mappedButton = mapping[button]
-      else
-        mappedButton = button
-      end
-      if mappedButton then
-        controller:recordPress(mappedButton)
+      local controller, mapping = connection.controller, connection.mapping
+      if not mapping then
+        controller:recordPress(button)
+      elseif mapping.buttons then
+        for targetButton, sourceButtons in pairs(mapping.buttons) do
+          for _, sourceButton in ipairs(sourceButtons) do
+            if sourceButton == button then
+              controller:recordPress(targetButton)
+            end
+          end
+        end
       end
     end
   end,
   _pipeRelease = function(self, button)
     for _, connection in ipairs(self._connections) do
-      local controller = connection.controller
-      local mapping = connection.mapping
-      local mappedButton
-      if mapping then
-        mappedButton = mapping[button]
-      else
-        mappedButton = button
+      local controller, mapping = connection.controller, connection.mapping
+      if not mapping then
+        controller:recordRelease(button)
+      elseif mapping.buttons then
+        for targetButton, sourceButtons in pairs(mapping.buttons) do
+          for _, sourceButton in ipairs(sourceButtons) do
+            if sourceButton == button then
+              controller:recordRelease(targetButton)
+            end
+          end
+        end
       end
-      if mappedButton then
-        controller:recordRelease(mappedButton)
+    end
+  end,
+  _pipeJoystick = function(self, joystick, x, y, countsAsMove)
+    for _, connection in ipairs(self._connections) do
+      local controller, mapping = connection.controller, connection.mapping
+      if not mapping then
+        controller:recordJoystick(joystick, x, y)
+      elseif mapping.joysticks then
+        for targetJoystick, sourceJoystick in pairs(mapping.joysticks) do
+          if sourceJoystick == joystick then
+            controller:recordJoystick(targetJoystick, x, y, countsAsMove)
+          end
+        end
       end
     end
   end
