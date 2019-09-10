@@ -5,11 +5,45 @@ local Controller = defineClass({
   _joysticks = nil,
   _connections = nil,
   init = function(self)
+    self.a = math.random()
     self._buttons = {}
     self._joysticks = {}
     self._connections = {}
   end,
-  update = function(self, dt) end,
+  update = function(self, dt)
+    -- Record the state for all button-based joysticks
+    for _, connection in ipairs(self._connections) do
+      local controller, mapping = connection.controller, connection.mapping
+      if mapping.joysticks then
+        for targetJoystick, sourceJoystick in pairs(mapping.joysticks) do
+          if sourceJoystick.up or sourceJoystick.left or sourceJoystick.down or sourceJoystick.right then
+            -- We've found a button-based joystick
+            local up, left, down, right = 0, 0, 0, 0
+            local joystickDirections = {
+              up = 0,
+              left = 0,
+              down = 0,
+              right = 0
+            }
+            for dir, _ in pairs(joystickDirections) do
+              for _, sourceButton in ipairs(sourceJoystick[dir]) do
+                if self:isDown(sourceButton) then
+                  joystickDirections[dir] = 1
+                end
+              end
+            end
+            local x = joystickDirections.right - joystickDirections.left
+            local y = joystickDirections.down - joystickDirections.up
+            if x ~= 0 and y ~= 0 then
+              x = x * math.sqrt(2) / 2
+              y = y * math.sqrt(2) / 2
+            end
+            controller:recordJoystick(targetJoystick, x, y, true)
+          end
+        end
+      end
+    end
+  end,
   postUpdate = function(self, dt)
     -- Increment all button states
     for _, buttonState in pairs(self._buttons) do

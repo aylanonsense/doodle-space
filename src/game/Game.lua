@@ -47,6 +47,17 @@ local Game = defineClass({
         rot.y - x * self.cameraSensitivity,
         rot.z)
     end
+    -- Move the camera around
+    local moveZ, moveX = self.controller:getJoystick('move')
+    local moveY = (self.controller:isDown('moveUp') and 1 or 0) - (self.controller:isDown('moveDown') and 1 or 0)
+    local speed = self.controller:isDown('sprint') and 15 or 3
+    if moveZ ~= 0 or moveX ~= 0 then
+      local angle = self.scene.camera.rotation.y + math.atan2(moveZ, moveX)
+      self.scene.camera:translate(-math.sin(angle) * speed * dt, 0, -math.cos(angle) * speed * dt)
+    end
+    if moveY ~= 0 then
+      self.scene.camera:translate(0, moveY * speed * dt, 0)
+    end
     -- Rotate the entity
     self.player:rotate(0, dt, 0)
     -- Update all of the entities

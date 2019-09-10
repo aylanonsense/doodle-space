@@ -7,9 +7,7 @@ local KeyboardController = defineClass(Controller, {
     -- Also check for any buttons that were released
     for button, buttonState in pairs(self._buttons) do
       if buttonState.isDown and not love.keyboard.isDown(button) then
-        buttonState.isDown = false
-        buttonState.release = 0
-        self:_pipeRelease(button)
+        self:recordRelease(button)
       end
     end
   end,
