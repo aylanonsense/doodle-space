@@ -2,6 +2,7 @@ local defineClass = require('utils/defineClass')
 local Scene = require('scene/Scene')
 local textures = require('scene/textures')
 local TestSubject = require('game/entity/TestSubject')
+local Planet = require('game/entity/Planet')
 local AxisArrows = require('game/entity/AxisArrows')
 
 local Game = defineClass({
@@ -25,9 +26,9 @@ local Game = defineClass({
     self.scene.camera:translate(3, 2, 3):rotate(0.1 * math.pi, -0.75 * math.pi, 0)
 
     -- Spawn an entity to play with
-    self.player = self:spawnEntity(TestSubject)
+    self.player = self:spawnEntity(TestSubject):rotate(-0.8, 0, 0):setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
     self:spawnEntity(AxisArrows, self.player)
-    self.player:rotate(-0.8, 0, 0):setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
+    self:spawnEntity(Planet, 20):translate(-30, 0, 0)
   end,
   update = function(self, dt)
     -- Toggle edit mode

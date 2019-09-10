@@ -11,7 +11,7 @@ varying vec3 normal;
   attribute vec4 vertex_normal;
 
   vec4 position(mat4 transform_projection, vec4 vertex_position) {
-    normal = vec3(model_transform_inverse * vertex_normal);
+    normal = normalize(vec3(model_transform_inverse * vertex_normal));
     return camera_transform * model_transform * vertex_position;
   }
 #endif

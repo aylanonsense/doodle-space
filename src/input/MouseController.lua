@@ -4,6 +4,7 @@ local Controller = require('input/Controller')
 local MouseController = defineClass(Controller, {
   update = function(self, dt)
     Controller.update(self, dt)
+
     -- Also check for any mouse buttons that were released
     for button, buttonState in pairs(self._buttons) do
       local btn = button:sub(11)

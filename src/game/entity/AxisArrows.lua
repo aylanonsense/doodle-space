@@ -8,7 +8,9 @@ local AXIS_ARROW_SHAPE = Shape.Arrow:new(3)
 
 local AxisArrows = defineClass(Entity, {
   target = nil,
-  models = nil,
+  xAxisArrow = nil,
+  yAxisArrow = nil,
+  zAxisArrow = nil,
   init = function(self, target)
     Entity.init(self)
     self.target = target
