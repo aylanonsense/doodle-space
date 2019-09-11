@@ -4,9 +4,17 @@ local Shape = require('scene/Shape')
 local textures = require('scene/textures')
 
 local Planet = defineClass(Entity, {
-  init = function(self, scale)
+  groups = { 'planets' },
+  radius = 1,
+  mass = 0,
+  init = function(self, radius)
     Entity.init(self, self.game.scene:spawnModel(Shape.Sphere, textures.grey))
-    self:setScale(scale, scale, scale)
+
+    -- Set scale and mass
+    self.radius = radius or 1
+    -- self.mass = math.pi * self.radius * self.radius * self.radius * 4 / 3
+    self.mass = self.radius
+    self:setScale(self.radius, self.radius, self.radius)
   end
 })
 

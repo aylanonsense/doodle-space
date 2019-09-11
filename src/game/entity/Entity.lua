@@ -32,6 +32,7 @@ local Entity = defineClass({
   axisTransformInverse = nil,
   model = nil,
   shouldDrawAxis = true,
+  groups = nil,
   init = function(self, model)
     self.position = Vector3:new()
     self.rotation = Vector3:new()
@@ -51,6 +52,16 @@ local Entity = defineClass({
     if self.model then
       self:transformModel(self.model)
     end
+  end,
+  isInGroup = function(self, group)
+    if self.groups then
+      for _, group2 in ipairs(self.groups) do
+        if group2 == group then
+          return true
+        end
+      end
+    end
+    return false
   end,
   transformModel = function(self, model)
     model:setPosition(self:getWorldPosition())

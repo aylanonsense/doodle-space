@@ -100,6 +100,15 @@ Vector3 = defineClass({
   squareLength = function(self)
     return self.x * self.x + self.y * self.y + self.z * self.z
   end,
+  setLength = function(self, length)
+    if self:isZero() then
+      self:set(0, 0, 0)
+    else
+      local currLength = self:length()
+      self:multiply(length / currLength, length / currLength, length / currLength)
+    end
+    return self
+  end,
   normalize = function(self)
     if self:isZero() then
       self:set(0, 0, 0)

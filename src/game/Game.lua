@@ -1,7 +1,7 @@
 local defineClass = require('utils/defineClass')
 local Scene = require('scene/Scene')
 local textures = require('scene/textures')
-local TestSubject = require('game/entity/TestSubject')
+local Player = require('game/entity/Player')
 local Planet = require('game/entity/Planet')
 local AxisArrows = require('game/entity/AxisArrows')
 
@@ -10,12 +10,15 @@ local Game = defineClass({
   scene = nil,
   controller = nil,
   entities = nil,
+  groups = nil,
   editMode = false,
-  player = nil,
   init = function(self, controller, width, height)
     self.scene = Scene:new(width, height)
     self.controller = controller
     self.entities = {}
+    self.groups = {
+      planets = {}
+    }
 
     -- Add vectors to better show the origin and each axis
     self.scene:spawnArrowInDirection({ 0, 0, 0 }, { 1, 0, 0 }, 10, textures.red)
@@ -26,9 +29,13 @@ local Game = defineClass({
     self.scene.camera:translate(3, 2, 3):rotate(0.1 * math.pi, -0.75 * math.pi, 0)
 
     -- Spawn an entity to play with
-    self.player = self:spawnEntity(TestSubject):rotate(-0.8, 0, 0):setAxis({ 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 }, { 2 * math.random() - 1, 2 * math.random() - 1, 2 * math.random() - 1 })
-    self:spawnEntity(AxisArrows, self.player)
-    self:spawnEntity(Planet, 20):translate(-30, 0, 0)
+    for i = 1, 500 do
+      self:spawnEntity(Player):translate(math.random(-50, 50), math.random(-50, 50), math.random(-50, 25))
+    end
+    -- self:spawnEntity(AxisArrows, self.player)
+    self:spawnEntity(Planet, 9):translate(-22, 0, 0)
+    self:spawnEntity(Planet, 5):translate(-5, 15, -40)
+    self:spawnEntity(Planet, 3):translate(15, -5, -20)
   end,
   update = function(self, dt)
     -- Toggle edit mode
@@ -59,8 +66,6 @@ local Game = defineClass({
     if moveY ~= 0 then
       self.scene.camera:translate(0, moveY * speed * dt, 0)
     end
-    -- Rotate the entity
-    self.player:rotate(0, dt, 0)
     -- Update all of the entities
     for _, entity in ipairs(self.entities) do
       entity:update(dt)
@@ -97,6 +102,14 @@ local Game = defineClass({
   spawnEntity = function(self, EntityClass, ...)
     local entity = EntityClass:newFromObject({ game = self }, ...)
     table.insert(self.entities, entity)
+    if entity.groups then
+      for _, group in ipairs(entity.groups) do
+        if not self.groups[group] then
+          self.groups[group] = {}
+        end
+        table.insert(self.groups[group], entity)
+      end
+    end
     return entity
   end
 })
