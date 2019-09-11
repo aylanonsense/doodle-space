@@ -2,22 +2,31 @@ local defineClass = require('utils/defineClass')
 local Entity = require('game/entity/Entity')
 local Shape = require('scene/Shape')
 local textures = require('scene/textures')
+local Vector3 = require('math/Vector3')
 
 local Player = defineClass(Entity, {
   mass = math.pi * 4 / 3,
   radius = 1,
+  gravity = nil,
   init = function(self)
-    Entity.init(self, self.game.scene:spawnModel(Shape.Sphere, textures.yellow))
+    Entity.init(self, self.game.scene:spawnModel(Shape.CubePerson, textures.yellow))
+    self.gravity = Vector3:new()
   end,
   update = function(self, dt)
-    -- Apply gravity from nearby planets
+    -- Sum gravity from nearby planets
+    self.gravity:zero()
     for _, planet in ipairs(self.game.groups.planets) do
       local diff = planet:getWorldPosition():clone():subtract(self:getWorldPosition())
       local dist = diff:length()
-      local acc = 10 * (self.mass * planet.mass) / (dist * dist)
+      local distFromSurface = math.max(0, dist - self.radius - planet.radius)
+      local acc = 20 * (self.mass * planet.mass) / math.pow(math.max(distFromSurface, 7), 3)
       diff:multiply(acc * dt, acc * dt, acc * dt)
-      self.velocity:add(diff)
+      self.gravity:add(diff)
     end
+
+    -- Apply gravity
+    self.velocity:add(self.gravity)
+    self:setAxis(-self.gravity.x, -self.gravity.y, -self.gravity.z, self.zAxis)
 
     -- Apply velocity
     self.position:add(self.velocity.x * dt, self.velocity.y * dt, self.velocity.z * dt)
@@ -38,6 +47,7 @@ local Player = defineClass(Entity, {
       end
     end
 
+    -- Apply some friction
     self.velocity:multiply(0.99, 0.99, 0.99)
   end
 })

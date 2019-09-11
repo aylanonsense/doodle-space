@@ -13,7 +13,7 @@ local Planet = defineClass(Entity, {
     -- Set scale and mass
     self.radius = radius or 1
     -- self.mass = math.pi * self.radius * self.radius * self.radius * 4 / 3
-    self.mass = self.radius
+    self.mass = 5 + 2 * self.radius
     self:setScale(self.radius, self.radius, self.radius)
   end
 })
